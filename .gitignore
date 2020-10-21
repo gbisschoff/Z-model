@@ -52,3 +52,5 @@ venv/
 # Project specific
 data/
 scratch/
+/pip.ini
+/pip.conf

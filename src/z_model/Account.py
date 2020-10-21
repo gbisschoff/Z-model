@@ -6,6 +6,7 @@ import numpy as np
 from functools import reduce
 from scipy.linalg import fractional_matrix_power
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from tqdm.auto import tqdm
 
 
@@ -565,7 +566,7 @@ class Account:
             .set_index(
                 pd.date_range(
                     start=self.reporting_date,
-                    end=self.maturity_date,
+                    end=self.maturity_date-relativedelta(months=1),
                     freq='M',
                     name='reporting_date'
                 )
