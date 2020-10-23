@@ -8,6 +8,7 @@ from scipy.linalg import fractional_matrix_power
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from tqdm.auto import tqdm
+from tqdm.contrib.concurrent import thread_map
 
 
 class RandomSeries:
@@ -439,7 +440,7 @@ class Account:
         if self.is_secured:
             return Collateral.from_assumptions(
                 collateral_value=self.collateral_value,
-                index=self.scenario[self.assumptions['lgd_collateral_index']][self.reporting_date:]
+                index=self.scenario[self.assumptions['lgd_collateral_index']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd_time_to_sale']+1)]
             )
         else:
             return None
@@ -450,7 +451,7 @@ class Account:
             return EffectiveInterestRate.from_assumptions(
                 spread=self.spread,
                 frequency=self.interest_rate_freq,
-                base_rate=self.scenario[self.assumptions['eir_base_rate']][self.reporting_date:]
+                base_rate=self.scenario[self.assumptions['eir_base_rate']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd_time_to_sale']+1)]
             )
         else:
             return EffectiveInterestRate.from_assumptions(spread=self.spread, frequency=self.interest_rate_freq)
@@ -474,7 +475,7 @@ class Account:
         return TransitionMatrix.from_assumption(
             ttc_transition_matrix=self.assumptions['pd_ttc_transition_matrix'],
             rho=self.assumptions['pd_rho'],
-            z=self.scenario[self.assumptions['pd_z']][self.reporting_date:]
+            z=self.scenario[self.assumptions['pd_z']][self.reporting_date:self.maturity_date+relativedelta(months=1)]
         )
 
     @property
@@ -566,7 +567,7 @@ class Account:
             .set_index(
                 pd.date_range(
                     start=self.reporting_date,
-                    end=self.maturity_date-relativedelta(months=1),
+                    periods=self.remaining_term,
                     freq='M',
                     name='reporting_date'
                 )
@@ -612,12 +613,16 @@ class AccountData:
         return cls(data=data)
 
     def execute(self, assumptions, scenarios):
-        results = []
-        for scenario, s in tqdm(scenarios.items(), desc='Running Scenario', total=len(scenarios)):
-            for contract_id, d in tqdm(self.data.iterrows(), desc='Running Model', total=len(self)):
+        def run_scenario(args):
+            name, scenario, assumptions, data = args
+            results = []
+            for contract_id, d in tqdm(data.iterrows(), desc=f'Model (Scenario: {name})', total=len(data.index)):
                 d['assumptions'] = assumptions[d['segment_id']]
-                d['scenario'] = s
-                r = Account(**d).results.assign(**{'contract_id': contract_id, 'scenario': scenario})
+                d['scenario'] = scenario
+                r = Account(**d).results.assign(**{'contract_id': contract_id, 'scenario': name})
                 results.append(r)
+            return pd.concat(results)
 
-        return pd.concat(results)
+        args = [(n, s, assumptions, self.data) for n, s in scenarios.items()]
+        r = map(run_scenario, args) #thread_map(run_scenario, args, desc='Scenario')
+        return pd.concat(r)
