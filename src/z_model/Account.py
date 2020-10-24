@@ -9,6 +9,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import thread_map
+from functools import lru_cache
 
 
 class RandomSeries:
@@ -471,6 +472,7 @@ class Account:
         )
 
     @property
+    @lru_cache(maxsize=1)
     def transition_matrix(self):
         return TransitionMatrix.from_assumption(
             ttc_transition_matrix=self.assumptions['pd_ttc_transition_matrix'],
@@ -514,6 +516,7 @@ class Account:
             )
 
     @property
+    @lru_cache(maxsize=1)
     def stage_probability(self):
         def add_write_off(X, freq, tts, p_cure):
             """
@@ -561,6 +564,7 @@ class Account:
         )
 
     @property
+    @lru_cache(maxsize=1)
     def results(self):
         return self.model.results\
             .reset_index()\
