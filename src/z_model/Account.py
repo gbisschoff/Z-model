@@ -129,7 +129,7 @@ class ProbabilityOfDefault:
     @classmethod
     def from_transition_matrix(cls, transition_matrix: TransitionMatrix, current_state: int, default_state: int = -1):
         cumulative_pd_curve = pd.Series(array([transition_matrix[0:i] for i in range(1, len(transition_matrix))])[:, current_state, default_state])
-        return cls(array((cumulative_pd_curve - cumulative_pd_curve.shift(1).fillna(0)) / (1 - cumulative_pd_curve.shift(1).fillna(0))))
+        return cls(array(((cumulative_pd_curve - cumulative_pd_curve.shift(1).fillna(0)) / (1 - cumulative_pd_curve.shift(1).fillna(0))).fillna(1)))
 
 
 class Survival:
@@ -147,7 +147,7 @@ class Survival:
 
     @classmethod
     def from_assumptions(cls, probability_of_default, redemption_rate):
-        return cls(1 - probability_of_default - redemption_rate)
+        return cls(np.maximum(1 - probability_of_default - redemption_rate, 0))
 
 
 class EffectiveInterestRate:
