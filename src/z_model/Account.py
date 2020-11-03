@@ -349,7 +349,7 @@ class Assumptions:
         segments = {}
         for segment_id, dct in assumptions.iterrows():
             dct['pd_ttc_transition_matrix'] = np.array(
-                transition_matrixes.loc[segment_id].pivot(index=['from'], columns='to', values='value'))
+                transition_matrixes.loc[segment_id].pivot(index='from', columns='to', values='value'))
             dct['stage_map'] = stage_map
             segments[segment_id] = cls(**dct)
 
