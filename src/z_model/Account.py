@@ -10,23 +10,47 @@ from dateutil.relativedelta import relativedelta
 from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import thread_map
 from functools import lru_cache
+from pylab import plot, show, xlabel, ylabel, axhline
 
 
-class RandomSeries:
-    def __init__(self, theta=0, m1=0, m2=0, sigma=1):
+class Series:
+    def __init__(self, T:float, N:int, x0:float=None, dx0=.0, theta=.0, m1=.0, m2=.0, sigma=.0, m=1, fun=lambda x: x):
+        self.T = T
+        self.N = N
+        self.x0 = theta if x0 is None else x0
+        self.dx0 = dx0
         self.theta = theta
         self.m1 = m1
         self.m2 = m2
         self.sigma = sigma
+        self.m=m
+        self.fun=fun
+        self.dt = T / N
+        self.dx, self.x, self.fx = self._forecast()
 
-    def generate(self, n, dz0=0, z0=None):
-        z0 = self.theta if z0 is None else z0
-        dz = [dz0] * n
-        z = [z0] * n
-        for t in range(1, n):
-            dz[t] = self.m1 * (self.theta - z[t-1]) + self.m2 * dz[t-1] + self.sigma*normal.rvs()
-            z[t] = z[t-1] + dz[t]
-        return array(z)
+    def __getitem__(self, item):
+        return self.__dict__[item]
+
+    def _forecast(self):
+        x = np.empty((self.m, self.N+1)); x[:,0] = self.x0
+        dx = np.empty((self.m, self.N+1)); dx[:,0] = self.dx0
+        dw = np.random.normal(scale=np.sqrt(self.dt), size=(self.m, self.N))
+
+        for i in range(self.N):
+            dx[:,i+1] = self.m1*(self.theta-x[:,i]) * self.dt + self.m2*dx[:,i] + self.sigma * dw[:,i]
+            x[:,i + 1] = x[:,i] + dx[:,i+1]
+
+        return dx, x, self.fun(x)
+
+    def plot(self, type='fx'):
+        x = self[type]
+        t = np.linspace(0.0, self.T, self.N + 1)
+        for k in range(self.m):
+            plot(t, x[k])
+        axhline(y=self.fun(self.theta), color='black', ls='--')
+        xlabel('t', fontsize=16)
+        ylabel('f(x)', fontsize=16)
+        show()
 
 
 class Collateral:
