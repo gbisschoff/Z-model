@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import thread_map
 from functools import lru_cache
 from pylab import plot, show, xlabel, ylabel, axhline
+import seaborn as sns
 
 
 class Series:
@@ -401,9 +402,24 @@ class Scenarios:
     def items(self):
         return self.x.items()
 
+    def as_dataframe(self):
+        return pd.concat([scenario.data for _, scenario in self.items()])
+
+    def plot(self, item):
+        data = self.as_dataframe()
+        sns.relplot(data=data, x='DATE', y=item, hue='SCENARIO', kind='line')
+
     @property
     def scenarios(self):
         return list(self.x.keys())
+
+    @classmethod
+    def from_dataframe(cls, data):
+        scenarios = dict()
+        for s, d in data.groupby('SCENARIO'):
+            scenarios[s] = Scenario(d)
+
+        return cls(scenarios)
 
     @classmethod
     def from_file(cls, url):
@@ -416,12 +432,49 @@ class Scenarios:
             },
             index_col = 'DATE'
         )
+        return cls.from_dataframe(data)
 
-        scenarios = dict()
-        for s, d in data.groupby('SCENARIO'):
-            scenarios[s] = Scenario(d)
+    @classmethod
+    def from_assumptions(cls, url):
+        FUN = {
+            'EXPONENTIAL': np.exp
+        }
+        assumptions = pd.read_excel(
+            io=url,
+            sheet_name='DATA',
+            dtype={
+                'NAME': str,
+                'START_DATE': datetime,
+                'T': float,
+                'N': int,
+                'x0': float,
+                'dx0': float,
+                'theta': float,
+                'm1': float,
+                'm2': float,
+                'sigma': float,
+                'm': int,
+                'fun': str
+            },
+            index_col = 'NAME'
+        )
 
-        return cls(scenarios)
+        def create_series(name, args):
+            start_date = args.pop('START_DATE')
+            args['fun'] = FUN.get(args['fun'], lambda x: x)
+            forecast = Series(**args)
+
+            forecast_data = pd.DataFrame(forecast.fx.T) \
+                .set_index(pd.date_range(start_date, periods=args['N'] + 1, freq='M')) \
+                .reset_index() \
+                .melt(id_vars='index', var_name='SCENARIO', value_name=name) \
+                .rename(columns={'index': 'DATE'})
+            forecast_data.SCENARIO = (forecast_data.SCENARIO + 1).astype(str)
+            return forecast_data
+
+        variables = [create_series(name, args) for name, args in assumptions.iterrows()]
+        data = reduce(lambda left, right: pd.merge(left, right, on=['DATE', 'SCENARIO'], how='inner'), variables)
+        return cls.from_dataframe(data)
 
 
 class Account:
