@@ -49,7 +49,7 @@ class Series:
             plot(t, x[k])
         axhline(y=self.fun(self.theta), color='black', ls='--')
         xlabel('t', fontsize=16)
-        ylabel('f(x)', fontsize=16)
+        ylabel(type, fontsize=16)
         show()
 
 
