@@ -72,22 +72,28 @@ class Collateral:
 class TransitionMatrix:
     def __init__(self, transition_matrix):
         self.transition_matrix = transition_matrix
+        self.shape = transition_matrix.shape
 
     def __len__(self):
         return len(self.transition_matrix)
 
     def __getitem__(self, t):
         if isinstance(t, slice):
-            if t.start == t.stop:
-                return np.identity(self.transition_matrix.shape[-1])
-            else:
-                return TransitionMatrix.matrix_cumulative_prod(self.transition_matrix[t])
+            return self.get_cumulative(t.start, t.stop)
         else:
             return self.transition_matrix[t]
 
+    def get_cumulative(self, start, stop, return_list=False):
+        l = np.append([np.identity(self.shape[-1])], self.transition_matrix[start:stop], axis=0)
+        r = self.matrix_cumulative_prod(l, return_list)
+        return r
+
     @staticmethod
-    def matrix_cumulative_prod(l):
-        return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
+    def matrix_cumulative_prod(l, return_list=False):
+        if return_list:
+            return np.array(reduce(lambda a, x: a + [a[-1] @ x] if a else [x], l, []))
+        else:
+            return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
 
     @classmethod
     def from_assumption(cls, ttc_transition_matrix, rho, z, default_state=-1, freq=12, delta=10**-8):
@@ -153,7 +159,7 @@ class ProbabilityOfDefault:
 
     @classmethod
     def from_transition_matrix(cls, transition_matrix: TransitionMatrix, current_state: int, default_state: int = -1):
-        cumulative_pd_curve = pd.Series(array([transition_matrix[0:i] for i in range(1, len(transition_matrix))])[:, current_state, default_state])
+        cumulative_pd_curve = pd.Series(transition_matrix.get_cumulative(0, len(transition_matrix), return_list=True)[1:, current_state, default_state])
         return cls(array(((cumulative_pd_curve - cumulative_pd_curve.shift(1).fillna(0)) / (1 - cumulative_pd_curve.shift(1).fillna(0))).fillna(1)))
 
 
@@ -266,7 +272,7 @@ class StageProbability:
 
     @classmethod
     def from_transition_matrix(cls, transition_matrix, origination_rating, current_rating, stage_mapping):
-        cp = array([transition_matrix[0:i] for i in range(len(transition_matrix))])[:, current_rating]
+        cp = transition_matrix.get_cumulative(0, len(transition_matrix), return_list=True)[:, current_rating]
         cp = array([[cp[t, stage_mapping[origination_rating][stage]].sum() for stage in range(4)] for t in range(len(cp))])
         return cls(cp)
 
@@ -407,6 +413,7 @@ class Scenarios:
 
     def plot(self, item):
         data = self.as_dataframe()
+        data.SCENARIO = data.SCENARIO.astype(str)
         sns.relplot(data=data, x='DATE', y=item, hue='SCENARIO', kind='line')
 
     @property
@@ -465,15 +472,15 @@ class Scenarios:
             forecast = Series(**args)
 
             forecast_data = pd.DataFrame(forecast.fx.T) \
-                .set_index(pd.date_range(start_date, periods=args['N'] + 1, freq='M')) \
+                .set_index(pd.date_range(start_date, periods=args['N'] + 1, freq='M', name='DATE')) \
                 .reset_index() \
-                .melt(id_vars='index', var_name='SCENARIO', value_name=name) \
-                .rename(columns={'index': 'DATE'})
-            forecast_data.SCENARIO = (forecast_data.SCENARIO + 1).astype(str)
+                .melt(id_vars='DATE', var_name='SCENARIO', value_name=name)
+            forecast_data.SCENARIO = forecast_data.SCENARIO + 1
             return forecast_data
 
         variables = [create_series(name, args) for name, args in assumptions.iterrows()]
-        data = reduce(lambda left, right: pd.merge(left, right, on=['DATE', 'SCENARIO'], how='inner'), variables)
+        data = reduce(lambda left, right: pd.merge(left, right, on=['DATE', 'SCENARIO'], how='inner'), variables)\
+            .set_index('DATE')
         return cls.from_dataframe(data)
 
 
