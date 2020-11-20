@@ -18,4 +18,5 @@ seaborn==0.11.0
 six==1.15.0
 tqdm==4.52.0
 xlrd==1.2.0
+-e git+git@github.com:gbisschoff/Z-model.git@858c9399dce37f6b9c5d99a770cdd69acf2a238c#egg=Z_model
 zope.interface==5.2.0
