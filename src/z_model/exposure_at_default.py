@@ -3,17 +3,29 @@ from .effective_interest_rate import EffectiveInterestRate
 
 
 class ExposureAtDefault:
-    def __init__(self, exposure_at_default: array):
-        self.exposure_at_default = exposure_at_default
+    def __init__(self, x: array):
+        self.x = x
 
     def __len__(self):
-        return len(self.exposure_at_default)
+        return len(self.x)
 
     def __getitem__(self, t):
-        return self.exposure_at_default[t]
+        return self.x[t]
+
+    @property
+    def values(self):
+        return self.x
 
     @classmethod
-    def from_assumptions(cls, outstanding_balance: float, current_arrears: float, remaining_term: int, contractual_payment: float, contractual_freq: int, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0):
+    def from_assumptions(cls, method: str, **kwargs):
+        return {
+            'CONSTANT': cls.constant,
+            'AMORTISING': cls.amortising,
+            'CCF': cls.credit_conversion_factor
+        }.get(method.upper())(**kwargs)
+
+    @classmethod
+    def amortising(cls, outstanding_balance: float, current_arrears: float, remaining_term: int, contractual_payment: float, contractual_freq: int, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, **kwargs):
         balance = [outstanding_balance]
         arrears = [0]
         for t in range(1, remaining_term + 1):
@@ -24,3 +36,18 @@ class ExposureAtDefault:
         balance = array(balance)
         arrears = array(arrears)
         return cls((balance + arrears)/outstanding_balance)
+
+    @classmethod
+    def constant(cls, exposure_at_default: float, remaining_term: int, **kwargs):
+        return cls(array([exposure_at_default] * remaining_term))
+
+    @classmethod
+    def credit_conversion_factor(cls, ccf_method: str, outstanding_balance: float, limit: float, ccf: float, remaining_term: int, **kwargs):
+        if ccf_method.upper() == 'METHOD 1':
+            return cls(array([ccf] * remaining_term))
+        elif ccf_method.upper() == 'METHOD 2':
+            return cls(array([limit * ccf / outstanding_balance] * remaining_term))
+        elif ccf_method.upper() == 'METHOD 3':
+            return cls(array([(outstanding_balance + (limit - outstanding_balance) * ccf) / outstanding_balance] * remaining_term))
+        else:
+            raise ValueError(f'CCF Method ({ccf_method}) not supported.')

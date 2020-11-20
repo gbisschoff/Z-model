@@ -1,8 +1,9 @@
-from pandas import read_excel, concat, Series, DataFrame, date_range, merge
+from pandas import read_excel, concat, DataFrame, date_range, merge
 from numpy import exp
 from functools import reduce
 from datetime import datetime
 import seaborn as sns
+from .series import Series
 
 
 class Scenario:
@@ -40,11 +41,7 @@ class Scenarios:
 
     @classmethod
     def from_dataframe(cls, data: DataFrame):
-        scenarios = dict()
-        for s, d in data.groupby('SCENARIO'):
-            scenarios[s] = Scenario(d)
-
-        return cls(scenarios)
+        return cls({s: Scenario(d) for s, d in data.groupby('SCENARIO')})
 
     @classmethod
     def from_file(cls, url: str):
@@ -84,13 +81,13 @@ class Scenarios:
             index_col='NAME'
         )
 
-        def create_series(name, args):
-            start_date = args.pop('START_DATE')
-            args['fun'] = FUN.get(args['fun'], lambda x: x)
-            forecast = Series(**args)
+        def create_series(name, kwargs):
+            start_date = kwargs.pop('START_DATE')
+            kwargs['fun'] = FUN.get(kwargs['fun'], lambda x: x)
+            forecast = Series(**kwargs)
 
             forecast_data = DataFrame(forecast.fx.T) \
-                .set_index(date_range(start_date, periods=args['N'] + 1, freq='M', name='DATE')) \
+                .set_index(date_range(start_date, periods=kwargs['N'] + 1, freq='M', name='DATE')) \
                 .reset_index() \
                 .melt(id_vars='DATE', var_name='SCENARIO', value_name=name)
             forecast_data.SCENARIO = forecast_data.SCENARIO + 1

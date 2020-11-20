@@ -2,6 +2,10 @@ from numpy import array
 from pandas import read_excel
 
 
+def filter_dict(d: dict, k: str):
+    return {key[len(k):]: value for (key, value) in d.items() if key.startswith(k)}
+
+
 class Assumptions:
     """
     Container that holds all the assumptions in a nested dictionary.
@@ -10,10 +14,12 @@ class Assumptions:
         'ASSUMPTIONS': {
             'segment_name': str,
             'segment_id': int,
-            'pd_z': str,
+            'pd_type': str,
+            'pd_z_index': str,
             'pd_rho': float,
             'pd_redemption_rate': float,
-            'lgd_is_secured': bool,
+            'lgd_type': str,
+            'lgd_loss_given_default': float,
             'lgd_collateral_index': str,
             'lgd_probability_of_cure': float,
             'lgd_loss_given_cure': float,
@@ -22,6 +28,10 @@ class Assumptions:
             'lgd_time_to_sale': int,
             'lgd_loss_given_write_off': float,
             'lgd_floor': float,
+            'ead_type': str,
+            'ead_exposure_at_default': float,
+            'ead_ccf_method': str,
+            'ead_ccf': float,
             'ead_fixed_fees': float,
             'ead_fees_pct': float,
             'ead_prepayment_pct': float,
@@ -29,9 +39,7 @@ class Assumptions:
         },
         'TRANSITION_MATRIX': {
             'segment_id': int,
-            'from': int,
-            'to': int,
-            'value': float,
+            'from': str,
         }
     }
 
@@ -60,16 +68,21 @@ class Assumptions:
             io=url,
             sheet_name='TRANSITION_MATRIX',
             dtype=cls.DICTIONARY['TRANSITION_MATRIX'],
-            index_col='segment_id',
-            usecols=cls.DICTIONARY['TRANSITION_MATRIX'].keys()
+            index_col='segment_id'
         )
 
         segments = {}
         for segment_id, dct in assumptions.iterrows():
-            dct['pd_ttc_transition_matrix'] = array(
-                transition_matrices.loc[segment_id].pivot(index='from', columns='to', values='value'))
-            dct['stage_map'] = stage_map
-            segments[segment_id] = cls(**dct)
+            dct['pd_ttc_transition_matrix'] = array(transition_matrices.drop(columns='from').loc[segment_id])
+            segments[segment_id] = cls(**{
+                'segment_name': dct.get('segment_name', 'Unknown'),
+                'segment_id': dct.get('segment_id', 0),
+                'stage_map': stage_map,
+                'pd': filter_dict(dct, 'pd_'),
+                'ead': filter_dict(dct, 'ead_'),
+                'lgd': filter_dict(dct, 'lgd_'),
+                'eir': filter_dict(dct, 'eir_'),
+            })
 
         return segments
 

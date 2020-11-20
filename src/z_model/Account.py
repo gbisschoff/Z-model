@@ -16,13 +16,14 @@ from .survival import Survival
 
 
 class Account:
-    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, spread, origination_date, maturity_date, reporting_date, collateral_value, origination_rating, current_rating, *args, **kwargs):
+    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, fixed_rate, spread, origination_date, maturity_date, reporting_date, collateral_value, origination_rating, current_rating, stage, *args, **kwargs):
         self.assumptions = assumptions
         self.scenario = scenario
         self.outstanding_balance = outstanding_balance
         self.current_arrears = current_arrears
         self.interest_rate_type = interest_rate_type
         self.interest_rate_freq = interest_rate_freq
+        self.fixed_rate = fixed_rate
         self.spread = spread
         self.origination_date = origination_date
         self.maturity_date = maturity_date
@@ -32,10 +33,7 @@ class Account:
         self.contractual_freq = contractual_freq
         self.origination_rating = origination_rating
         self.current_rating = current_rating
-
-    @property
-    def is_secured(self):
-        return self.assumptions['lgd_is_secured']
+        self.stage = stage
 
     @property
     def remaining_term(self):
@@ -52,83 +50,87 @@ class Account:
                (self.maturity_date.month - self.origination_date.month)
 
     @property
+    def collateral_index(self):
+        return self.scenario[self.assumptions['lgd']['collateral_index']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd']['time_to_sale']+1)]
+
+    @property
+    def z_index(self):
+        return self.scenario[self.assumptions['pd']['z_index']][self.reporting_date:self.maturity_date+relativedelta(months=1)]
+
+    @property
+    def base_rate(self):
+        return self.scenario[self.assumptions['eir']['base_rate']][
+            self.reporting_date:self.maturity_date + relativedelta(months=self.assumptions['lgd']['time_to_sale'] + 1)]
+
+    @property
     def collateral(self):
-        if self.is_secured:
+        if self.assumptions['lgd']['type'].upper() == 'SECURED':
             return Collateral.from_assumptions(
                 collateral_value=self.collateral_value,
-                index=self.scenario[self.assumptions['lgd_collateral_index']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd_time_to_sale']+1)]
+                index=self.collateral_index
             )
         else:
             return None
 
     @property
     def effective_interest_rate(self):
-        if self.interest_rate_type.upper == 'FLOAT':
-            return EffectiveInterestRate.from_assumptions(
-                spread=self.spread,
-                frequency=self.interest_rate_freq,
-                base_rate=self.scenario[self.assumptions['eir_base_rate']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd_time_to_sale']+1)]
-            )
-        else:
-            return EffectiveInterestRate.from_assumptions(spread=self.spread, frequency=self.interest_rate_freq)
+        return EffectiveInterestRate.from_assumptions(
+            method=self.interest_rate_type,
+            fixed_rate=self.fixed_rate,
+            spread=self.spread,
+            frequency=self.interest_rate_freq,
+            base_rate=self.base_rate
+        )
 
     @property
     def exposure_at_default(self):
         return ExposureAtDefault.from_assumptions(
+            method=self.assumptions['ead']['type'],
             outstanding_balance=self.outstanding_balance,
             current_arrears=self.current_arrears,
             remaining_term=self.remaining_term,
             contractual_payment=self.contractual_payment,
             contractual_freq=self.contractual_freq,
             effective_interest_rate=self.effective_interest_rate,
-            fixed_fees=self.assumptions['ead_fixed_fees'],
-            fees_pct=self.assumptions['ead_fees_pct'],
-            prepayment_pct=self.assumptions['ead_prepayment_pct']
+            **self.assumptions['ead']
         )
 
     @property
     @lru_cache(maxsize=1)
     def transition_matrix(self):
         return TransitionMatrix.from_assumption(
-            ttc_transition_matrix=self.assumptions['pd_ttc_transition_matrix'],
-            rho=self.assumptions['pd_rho'],
-            z=self.scenario[self.assumptions['pd_z']][self.reporting_date:self.maturity_date+relativedelta(months=1)]
+            ttc_transition_matrix=self.assumptions['pd']['ttc_transition_matrix'],
+            rho=self.assumptions['pd']['rho'],
+            z=self.z_index
         )
 
     @property
+    @lru_cache(maxsize=1)
     def probability_of_default(self):
-        return ProbabilityOfDefault.from_transition_matrix(
+        return ProbabilityOfDefault.from_assumptions(
+            method=self.assumptions['pd']['type'],
             transition_matrix=self.transition_matrix,
-            current_state=self.current_rating
+            current_state=self.current_rating,
+            z=self.z_index,
+            rho=self.assumptions['pd']['rho']
         )
 
     @property
     def survival(self):
         return Survival.from_assumptions(
-            probability_of_default=self.probability_of_default.probability_of_default,
-            redemption_rate=self.assumptions['pd_redemption_rate']
+            probability_of_default=self.probability_of_default.values,
+            redemption_rate=self.assumptions['pd']['redemption_rate']
         )
 
     @property
     def loss_given_default(self):
-        if self.is_secured:
-            return LossGivenDefault.secured_loss_given_default(
-                exposure_at_default=self.exposure_at_default[:]*self.outstanding_balance,
-                collateral=self.collateral,
-                effective_interest_rate=self.effective_interest_rate,
-                probability_of_cure=self.assumptions['lgd_probability_of_cure'],
-                loss_given_cure=self.assumptions['lgd_loss_given_cure'],
-                time_to_sale=self.assumptions['lgd_time_to_sale'],
-                forced_sale_discount=self.assumptions['lgd_forced_sale_discount'],
-                sales_cost=self.assumptions['lgd_sales_cost'],
-                floor=self.assumptions['lgd_floor']
-            )
-        else:
-            return LossGivenDefault.unsecured_loss_given_default(
-                probability_of_cure=self.assumptions['lgd_probability_of_cure'],
-                loss_given_cure=self.assumptions['lgd_loss_given_cure'],
-                loss_given_write_off=self.assumptions['lgd_loss_given_write_off']
-            )
+        return LossGivenDefault.from_assumptions(
+            method=self.assumptions['lgd']['type'],
+            exposure_at_default=self.exposure_at_default.values * self.outstanding_balance,
+            collateral=self.collateral,
+            effective_interest_rate=self.effective_interest_rate,
+            **self.assumptions['lgd']
+        )
 
     @property
     @lru_cache(maxsize=1)
@@ -136,33 +138,32 @@ class Account:
         def add_write_off(x, freq, tts, p_cure):
             """
             Add write-off state to the matrix
-            :param X: a single period transition matrix
+            :param x: a single period transition matrix
             :param freq: transition matrix horizon
             :param tts: time to sale / time to write-off
             :param p_cure: probability of cure
             :return: transition matrix with the added write-off state
             """
             rows, columns = x.shape
-            temp = column_stack((x, zeros(rows)))
-            y = zeros(columns + 1)
-            y[-1] = 1
-            temp = vstack((temp, y))
 
             s = (1 - 1 / tts) ** freq
             c = (1 - s) * p_cure
             wo = (1 - s) * (1 - p_cure)
 
-            z = zeros(columns + 1)
-            z[-3:] = c, s, wo
-            temp[-2] = z
-            return temp
+            x_new = zeros((rows + 1, columns + 1), dtype=x.dtype)
+            x_new[0:rows, 0:columns] = x
+            x_new[-1, -1] = 1
+            x_new[-2, -3:] = c, s, wo
 
-        tm = TransitionMatrix(array([add_write_off(x, 1, self.assumptions['lgd_time_to_sale'], self.assumptions['lgd_probability_of_cure']) for x in self.transition_matrix.transition_matrix]))
+            return x_new
+
+        tm = array([add_write_off(x, 1, self.assumptions['lgd']['time_to_sale'], self.assumptions['lgd']['probability_of_cure']) for x in self.transition_matrix.values])
         return StageProbability.from_transition_matrix(
-            transition_matrix=tm,
+            transition_matrix=TransitionMatrix(tm),
             origination_rating=self.origination_rating,
             current_rating=self.current_rating,
-            stage_mapping=self.assumptions['stage_map']
+            stage_mapping=self.assumptions['stage_map'],
+            stage=self.stage
         )
 
     @property

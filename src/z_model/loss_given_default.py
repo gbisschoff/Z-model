@@ -14,7 +14,7 @@ class LossGivenDefault:
         return self.loss_given_default[t]
 
     @classmethod
-    def secured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, exposure_at_default: array, collateral: Collateral, time_to_sale: int, forced_sale_discount: float, sales_cost: float, effective_interest_rate: EffectiveInterestRate, floor: float):
+    def secured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, exposure_at_default: array, collateral: Collateral, time_to_sale: int, forced_sale_discount: float, sales_cost: float, effective_interest_rate: EffectiveInterestRate, floor: float, **kwargs):
         return cls(array([
             probability_of_cure * \
             loss_given_cure + \
@@ -28,13 +28,18 @@ class LossGivenDefault:
         ]))
 
     @classmethod
-    def unsecured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float):
+    def unsecured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float, **kwargs):
         return cls(array([probability_of_cure * loss_given_cure + (1 - probability_of_cure) * loss_given_write_off] * 35 * 12))
 
     @classmethod
-    def from_assumptions(cls, is_secured: bool, **kwargs):
-        if is_secured:
-            return cls.secured_loss_given_default(**kwargs)
-        else:
-            return cls.unsecured_loss_given_default(**kwargs)
+    def constant(cls, loss_given_default: float):
+        return cls(array([loss_given_default] * 35 * 12))
 
+    @classmethod
+    def from_assumptions(cls, method: str, **kwargs):
+        switcher = {
+            'SECURED': cls.secured_loss_given_default,
+            'UNSECURED': cls.unsecured_loss_given_default,
+            'CONSTANT': cls.constant
+        }
+        return switcher.get(method.upper())(**kwargs)

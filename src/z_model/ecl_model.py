@@ -23,14 +23,14 @@ class ECLModel:
     def results(self):
         result = DataFrame({
             'S(t)': array([self.survival[:t] for t in range(self.remaining_term)]),
-            'PD(t)': array([self.probability_of_default[t] for t in range(self.remaining_term)]),
-            'EAD(t+1)': array([self.exposure_at_default[t+1] for t in range(self.remaining_term)]),
-            'LGD(t)': array([self.loss_given_default[t] for t in range(self.remaining_term)]),
-            'LGD(t+1)': array([self.loss_given_default[t+1] for t in range(self.remaining_term)]),
+            'PD(t)': self.probability_of_default.values[0:self.remaining_term],
+            'EAD(t+1)': self.exposure_at_default[1:self.remaining_term+1],
+            'LGD(t)': self.loss_given_default[0:self.remaining_term],
+            'LGD(t+1)': self.loss_given_default[1:self.remaining_term+1],
             'DF(t+1)': array([1 / (1 + self.effective_interest_rate[:t+1]) for t in range(self.remaining_term)]),
-            'P(S=1)': array([self.stage_probability[t, 0] for t in range(self.remaining_term)]),
-            'P(S=2)': array([self.stage_probability[t, 1] for t in range(self.remaining_term)]),
-            'P(S=3)': array([self.stage_probability[t, 2] for t in range(self.remaining_term)])
+            'P(S=1)': self.stage_probability[0:self.remaining_term, 0],
+            'P(S=2)': self.stage_probability[0:self.remaining_term, 1],
+            'P(S=3)': self.stage_probability[0:self.remaining_term, 2]
         }, index=range(self.remaining_term))
         result.index.name = 'T'
         result['Marginal CR(t)'] = result['S(t)'] * result['PD(t)'] * result['EAD(t+1)'] * result['LGD(t+1)'] * result['DF(t+1)']

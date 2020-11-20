@@ -18,6 +18,10 @@ class TransitionMatrix:
         else:
             return self.x[t]
 
+    @property
+    def values(self):
+        return self.x
+
     def get_cumulative(self, start: int, stop: int, return_list=False):
         l = append([identity(self.shape[-1])], self.x[start:stop], axis=0)
         r = self.matrix_cumulative_prod(l, return_list)
@@ -31,7 +35,7 @@ class TransitionMatrix:
             return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
 
     @classmethod
-    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: array, default_state: int = -1, freq: int = 12, delta: float = 10**-8):
+    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: array, default_state: int = -1, freq: int = 12, delta: float = 10**-8, **kwargs):
 
         def fraction_matrix(x, freq):
             temp = fractional_matrix_power(x, 1 / freq)
@@ -66,7 +70,7 @@ class TransitionMatrix:
             matrix[:, default_state] = normal.cdf(default_barrier_matrix[:, default_state], z_dd) + delta
             return standardise(matrix)
 
-        ttc_transition_matrix = fraction_matrix(standardise(ttc_transition_matrix, delta), freq)
+        ttc_transition_matrix = fraction_matrix(standardise(array(ttc_transition_matrix), delta), freq)
         default_distance_vector = default_distance(ttc_transition_matrix, default_state, delta)
         default_barrier_matrix = default_barrier(ttc_transition_matrix, default_state, delta)
         return cls(array([
