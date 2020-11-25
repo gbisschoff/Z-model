@@ -3,12 +3,27 @@ from pandas import read_excel
 
 
 def filter_dict(d: dict, k: str):
+    """
+    Filter a dictionary for all keys that start with `k`.
+
+    Args:
+        d: Dictionary to filter.
+        k: String to filter the dictionary with.
+
+    Returns:
+        A dictionary with all keys that start with `k`.
+    """
     return {key[len(k):]: value for (key, value) in d.items() if key.startswith(k)}
 
 
 class Assumptions:
     """
     Container that holds all the assumptions in a nested dictionary.
+
+    Attributes:
+        DICTIONARY (dict): Data dictionary of the excel file used to create the assumptions class.
+        assumptions (dict): Nested dictionary containing the assumptions.
+
     """
     DICTIONARY = {
         'ASSUMPTIONS': {
@@ -56,7 +71,17 @@ class Assumptions:
         return str(self)
 
     @classmethod
-    def from_file(cls, url, stage_map):
+    def from_file(cls, url: str, stage_map: dict):
+        """
+        Creates a dictionary of :obj:`Assumptions`.
+
+        Args:
+            url: Relative path to the Excel file.
+            stage_map: Dictionary containing the staging rules.
+
+        Returns:
+            A dictionary of :obj:`Assumptions`.
+        """
         assumptions = read_excel(
             io=url,
             sheet_name='ASSUMPTIONS',
@@ -85,4 +110,3 @@ class Assumptions:
             })
 
         return segments
-
