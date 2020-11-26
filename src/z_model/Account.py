@@ -189,6 +189,6 @@ class Account:
                     start=self.reporting_date,
                     periods=self.remaining_term,
                     freq='M',
-                    name='reporting_date'
+                    name='forecast_reporting_date'
                 )
             )

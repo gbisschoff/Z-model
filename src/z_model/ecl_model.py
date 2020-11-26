@@ -24,6 +24,7 @@ class ECLModel:
         result = DataFrame({
             'S(t)': array([self.survival[:t] for t in range(self.remaining_term)]),
             'PD(t)': self.probability_of_default.values[0:self.remaining_term],
+            'EAD(t)': self.exposure_at_default[0:self.remaining_term],
             'EAD(t+1)': self.exposure_at_default[1:self.remaining_term+1],
             'LGD(t)': self.loss_given_default[0:self.remaining_term],
             'LGD(t+1)': self.loss_given_default[1:self.remaining_term+1],
@@ -38,7 +39,8 @@ class ECLModel:
         result['STAGE2(t)'] = result['Marginal CR(t)'][::-1].cumsum() * result['DF(t+1)'][1] / result['DF(t+1)']
         result['STAGE3(t)'] = result['LGD(t)']
         result['CR(t)'] = result['STAGE1(t)'] * result['P(S=1)'] + result['STAGE2(t)'] * result['P(S=2)'] + result['STAGE3(t)'] * result['P(S=3)']
-        result['ECL(t)'] = result['CR(t)'] * self.outstanding_balance
+        result['Exposure(t)'] = result['EAD(t)'] * self.outstanding_balance
+        result['ECL(t)'] = result['CR(t)'] * result['Exposure(t)']
         return result
 
     @property
