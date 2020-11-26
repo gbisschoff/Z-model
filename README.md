@@ -5,6 +5,11 @@ A simple IFRS 9 and Stress Testing Credit Risk Model.
 ## Getting Started
 ### Requirements:
 1. Install [Git](https://git-scm.com/download/win).
+    During setup ensure the following options are selected:
+    - **Select Components**: ensure "Windows Explorer integration" is selected.
+	- **Choosing the SSH executable**: select "Use OpenSSH".  This option may not be displayed.  
+	- **Configuring the line endings conventions**: select "Checkout as-is, commit Unix-style line endings".
+
 2. Install [Python](https://www.python.org/downloads/windows/).
 3. Install [PyCharm](https://www.jetbrains.com/pycharm/download/#section=windows) or any other IDE of your choice.
 4. Install [C++ Build Tools](https://wiki.python.org/moin/WindowsCompilers), it is required by packages like Numpy that use Cython.
