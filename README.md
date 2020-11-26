@@ -1,9 +1,19 @@
 # Z-Model
 
-A simple IFRS 9 and Stress Testing Credit Risk Model
+A simple IFRS 9 and Stress Testing Credit Risk Model.
 
 ## Getting Started
+### Requirements:
+1. Install [Git](https://git-scm.com/download/win).
+2. Install [Python](https://www.python.org/downloads/windows/).
+3. Install [PyCharm](https://www.jetbrains.com/pycharm/download/#section=windows) or any other IDE of your choice.
+4. Install [C++ Build Tools](https://wiki.python.org/moin/WindowsCompilers), it is required by packages like Numpy that use Cython.
+5. If you are working from behind a proxy make sure to set the `HTTP_PROXY` and `HTTPS_PROXY` environment variables using the following format:
+    `http://{username}:{password}@{proxy}:{port}`
+6. Create a [`pip.ini`](./pip.ini) file in you Home/User directory 
+
 ### How to install the Z-model package:
+0. Open Git Bash (Right click in a folder and select `Git Bash Here`)
 1. Create working directory `mkdir Z-model`
 2. Change directory into Z-model `cd Z-model`
 3. Inside the directory create a virtual environment to store all your packages `py -m venv .venv`
