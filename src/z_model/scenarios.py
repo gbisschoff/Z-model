@@ -10,7 +10,9 @@ class Scenario:
     """
     Container to store a single scenario's data
     """
-    def __init__(self, data: DataFrame):
+    def __init__(self, data: DataFrame, method: str = 'linear'):
+        data = data.resample('M').interpolate(method)
+        data['SCENARIO'] = data['SCENARIO'].interpolate(method='pad')
         self.data = data
 
     def __getitem__(self, item):
