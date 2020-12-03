@@ -43,4 +43,4 @@ class Executor:
         """
         args = [(n, s, assumptions, account_data) for n, s in scenarios.items()]
         r = self.METHODS.get(self.method)(self._run_scenario, args, desc='Scenarios', position=0)
-        return Results(merge(account_data.data, concat(r), how='left', on='contract_id'))
+        return Results(merge(account_data.data, concat(r).reset_index(), how='left', on='contract_id'))
