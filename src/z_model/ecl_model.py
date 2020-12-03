@@ -31,19 +31,15 @@ class ECLModel:
             'DF(t+1)': array([1 / (1 + self.effective_interest_rate[:t+1]) for t in range(self.remaining_term)]),
             'P(S=1)': self.stage_probability[0:self.remaining_term, 0],
             'P(S=2)': self.stage_probability[0:self.remaining_term, 1],
-            'P(S=3)': self.stage_probability[0:self.remaining_term, 2]
+            'P(S=3)': self.stage_probability[0:self.remaining_term, 2],
+            'P(S=WO)': self.stage_probability[0:self.remaining_term, 3],
         }, index=range(self.remaining_term))
         result.index.name = 'T'
         result['Marginal CR(t)'] = result['S(t)'] * result['PD(t)'] * result['EAD(t+1)'] * result['LGD(t+1)'] * result['DF(t+1)']
         result['STAGE1(t)'] = (result['Marginal CR(t)'][::-1].cumsum() - result['Marginal CR(t)'][::-1].cumsum().shift(12).fillna(0)) * result['DF(t+1)'][0] / result['DF(t+1)']
         result['STAGE2(t)'] = result['Marginal CR(t)'][::-1].cumsum() * result['DF(t+1)'][0] / result['DF(t+1)']
         result['STAGE3(t)'] = result['LGD(t)']
-        result['CR(t)'] = result['STAGE1(t)'] * result['P(S=1)'] + result['STAGE2(t)'] * result['P(S=2)'] + result['STAGE3(t)'] * result['P(S=3)']
-        result['Exposure(t)'] = result['EAD(t)'] * self.outstanding_balance
+        result['CR(t)'] = (result['STAGE1(t)'] * result['P(S=1)'] + result['STAGE2(t)'] * result['P(S=2)'] + result['STAGE3(t)'] * result['P(S=3)']) / (1 - result['P(S=WO)'])
+        result['Exposure(t)'] = result['EAD(t)'] * self.outstanding_balance * (1 - result['P(S=WO)'])
         result['ECL(t)'] = result['CR(t)'] * result['Exposure(t)']
         return result
-
-    @property
-    def coverage_ratio(self):
-        return self.results['CR(t)']
-

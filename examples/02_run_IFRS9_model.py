@@ -57,5 +57,5 @@ if __name__ == '__main__':
         scenarios=scenarios
     )
 
-    print(results.summarise(by=['T', 'Stage', 'scenario']).loc[0])
+    print(results.summarise().loc[0])
     results.data.to_csv('./data/results.csv', index=False)
