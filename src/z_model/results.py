@@ -38,9 +38,7 @@ class Results:
             data=self.long,
             index=list(by),
             values=['P(S=s)', 'Exposure(t)', 'ECL(t)'],
-            aggfunc=np_sum,
-            margins=True,
-            margins_name='Total'
+            aggfunc=np_sum
         )
         pvt['CR(t)'] = pvt['ECL(t)'] / pvt['Exposure(t)']
         pvt.rename(columns={'P(S=s)': '#'}, inplace=True)
