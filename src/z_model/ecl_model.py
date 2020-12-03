@@ -36,7 +36,7 @@ class ECLModel:
         result.index.name = 'T'
         result['Marginal CR(t)'] = result['S(t)'] * result['PD(t)'] * result['EAD(t+1)'] * result['LGD(t+1)'] * result['DF(t+1)']
         result['STAGE1(t)'] = (result['Marginal CR(t)'][::-1].cumsum() - result['Marginal CR(t)'][::-1].cumsum().shift(12).fillna(0)) * result['DF(t+1)'][0] / result['DF(t+1)']
-        result['STAGE2(t)'] = result['Marginal CR(t)'][::-1].cumsum() * result['DF(t+1)'][1] / result['DF(t+1)']
+        result['STAGE2(t)'] = result['Marginal CR(t)'][::-1].cumsum() * result['DF(t+1)'][0] / result['DF(t+1)']
         result['STAGE3(t)'] = result['LGD(t)']
         result['CR(t)'] = result['STAGE1(t)'] * result['P(S=1)'] + result['STAGE2(t)'] * result['P(S=2)'] + result['STAGE3(t)'] * result['P(S=3)']
         result['Exposure(t)'] = result['EAD(t)'] * self.outstanding_balance
