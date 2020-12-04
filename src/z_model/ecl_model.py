@@ -41,5 +41,6 @@ class ECLModel:
         result['STAGE3(t)'] = result['LGD(t)']
         result['CR(t)'] = (result['STAGE1(t)'] * result['P(S=1)'] + result['STAGE2(t)'] * result['P(S=2)'] + result['STAGE3(t)'] * result['P(S=3)']) / (1 - result['P(S=WO)'])
         result['Exposure(t)'] = result['EAD(t)'] * self.outstanding_balance * (1 - result['P(S=WO)'])
+        result['Write-off(t)'] = result['EAD(t)'] * self.outstanding_balance * result['P(S=WO)']
         result['ECL(t)'] = result['CR(t)'] * result['Exposure(t)']
         return result

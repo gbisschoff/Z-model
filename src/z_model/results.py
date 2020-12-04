@@ -18,13 +18,14 @@ class Results:
             f'ECL(t)_{s}': rs[f'Exposure(t)_{s}'] * rs[f'STAGE{s}(t)']
             for s in [1, 2, 3]
         })
-        rs.rename(columns={f'P(S={s})': f'P(S=s)_{s}' for s in [1, 2, 3]}, inplace=True)
+        rs.rename(columns={f'P(S={s})': f'P(S=s)_{s}' for s in [1, 2, 3, 'WO']} | {'Write-off(t)': 'Exposure(t)_WO'}, inplace=True)
         rs.drop(columns=['S(t)', 'PD(t)', 'EAD(t)', 'EAD(t+1)', 'LGD(t)', 'LGD(t+1)', 'DF(t+1)', 'Marginal CR(t)',
-                         'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)', 'CR(t)', 'Exposure(t)', 'ECL(t)', 'P(S=WO)'],
+                         'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)', 'CR(t)', 'Exposure(t)', 'ECL(t)'],
                 inplace=True)
+        rs['ECL(t)_WO'] = rs['Exposure(t)_WO']
         rs = rs.melt(
             id_vars=rs.columns.drop(
-                sum([[f'P(S=s)_{s}', f'Exposure(t)_{s}', f'ECL(t)_{s}'] for s in [1, 2, 3]], [])
+                sum([[f'P(S=s)_{s}', f'Exposure(t)_{s}', f'ECL(t)_{s}'] for s in [1, 2, 3, 'WO']], [])
             )
         )
         temp = rs["variable"].str.split("_", n=1, expand=True)
