@@ -32,7 +32,7 @@ class LossGivenDefault:
         return cls(array([probability_of_cure * loss_given_cure + (1 - probability_of_cure) * loss_given_write_off] * 35 * 12))
 
     @classmethod
-    def constant(cls, loss_given_default: float):
+    def constant(cls, loss_given_default: float, **kwargs):
         return cls(array([loss_given_default] * 35 * 12))
 
     @classmethod
