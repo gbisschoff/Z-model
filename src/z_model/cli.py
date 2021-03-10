@@ -20,28 +20,16 @@ import sys
 import logging
 
 from z_model import __version__
+from z_model.assumptions import Assumptions
+from z_model.scenarios import Scenarios
+from z_model.account_data import AccountData
+from z_model.exeutor import Executor
 
 __author__ = "Geyer Bisschoff"
 __copyright__ = "Geyer Bisschoff"
 __license__ = "mit"
 
 _logger = logging.getLogger(__name__)
-
-
-def fib(n):
-    """Fibonacci example function
-
-    Args:
-      n (int): integer
-
-    Returns:
-      int: n-th Fibonacci number
-    """
-    assert n > 0
-    a, b = 1, 1
-    for i in range(n-1):
-        a, b = b, a+b
-    return a
 
 
 def parse_args(args):
@@ -54,16 +42,31 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description="Just a Fibonacci demonstration")
+        description="Z-model CLI")
     parser.add_argument(
         "--version",
         action="version",
-        version="Z-model {ver}".format(ver=__version__))
+        version=f"Z-model {__version__}")
     parser.add_argument(
-        dest="n",
-        help="n-th Fibonacci number",
-        type=int,
-        metavar="INT")
+        dest="assumptions",
+        help="file path to ASSUMPTIONS.xlsx",
+        type=str,
+        metavar="A")
+    parser.add_argument(
+        dest="scenarios",
+        help="file path to SCENARIOS.xlsx",
+        type=str,
+        metavar="S")
+    parser.add_argument(
+        dest="account_data",
+        help="file path to account_level_data.xlsx",
+        type=str,
+        metavar="D")
+    parser.add_argument(
+        dest="outfile",
+        help="output file path",
+        type=str,
+        metavar="O")
     parser.add_argument(
         "-v",
         "--verbose",
@@ -101,8 +104,21 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     _logger.debug("Starting crazy calculations...")
-    print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
-    _logger.info("Script ends here")
+
+
+    assumptions = Assumptions.from_file(url=args.assumptions)
+    scenarios = Scenarios.from_file(url=args.scenarios)
+    account_data = AccountData.from_file(url=args.account_data)
+
+    results = Executor(method='process_map').execute(
+        account_data=account_data,
+        assumptions=assumptions,
+        scenarios=scenarios
+    )
+
+    results.long.to_csv(args.outfile, index=False)
+
+    _logger.info("Done.")
 
 
 def run():

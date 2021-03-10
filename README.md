@@ -27,7 +27,7 @@ A simple IFRS 9 and Stress Testing Credit Risk Model.
 6. Install dependencies `pip install wheel pyscaffold`
 7. Install Z-model's dependencies `pip install --trusted-host raw.githubusercontent.com -r https://raw.githubusercontent.com/gbisschoff/Z-model/main/requirements.txt`
 8. Install the Z-model `pip install git+https://github.com/gbisschoff/Z-model.git`
-8. You are ready to use the Z-model by using `import z_model` in Python
+9. You are ready to use the Z-model by using `import z_model` in Python
 
 ## FAQ
 TODO: Update section with common questions and answers

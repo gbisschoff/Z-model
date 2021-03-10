@@ -29,7 +29,7 @@ class AccountData:
         'collateral_value': float,
         'origination_rating': int,
         'current_rating': int,
-        'stage': Int64Dtype()
+        'watchlist': Int64Dtype()
     }
     FILE_TYPE_MAP = {
         'XLSX': read_excel,

@@ -1,6 +1,6 @@
 from numpy import array
 from pandas import read_excel
-
+from .stage_map import StageMap
 
 def filter_dict(d: dict, k: str):
     """
@@ -71,7 +71,7 @@ class Assumptions:
         return str(self)
 
     @classmethod
-    def from_file(cls, url: str, stage_map: dict):
+    def from_file(cls, url: str, *args, **kwargs):
         """
         Creates a dictionary of :obj:`Assumptions`.
 
@@ -95,6 +95,7 @@ class Assumptions:
             dtype=cls.DICTIONARY['TRANSITION_MATRIX'],
             index_col='segment_id'
         )
+        stage_map = StageMap.from_file(url).x
 
         segments = {}
         for segment_id, dct in assumptions.iterrows():

@@ -16,7 +16,7 @@ from .survival import Survival
 
 
 class Account:
-    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, fixed_rate, spread, origination_date, maturity_date, reporting_date, collateral_value, origination_rating, current_rating, stage, *args, **kwargs):
+    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, fixed_rate, spread, origination_date, maturity_date, reporting_date, collateral_value, origination_rating, current_rating, watchlist, *args, **kwargs):
         self.assumptions = assumptions
         self.scenario = scenario
         self.outstanding_balance = outstanding_balance
@@ -33,7 +33,7 @@ class Account:
         self.contractual_freq = contractual_freq
         self.origination_rating = origination_rating
         self.current_rating = current_rating
-        self.stage = stage
+        self.watchlist = watchlist
 
     @property
     def remaining_term(self):
@@ -163,7 +163,7 @@ class Account:
             origination_rating=self.origination_rating,
             current_rating=self.current_rating,
             stage_mapping=self.assumptions['stage_map'],
-            stage=self.stage
+            watchlist=self.watchlist
         )
 
     @property

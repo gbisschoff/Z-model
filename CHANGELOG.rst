@@ -5,6 +5,7 @@ Changelog
 Version 0.1
 ===========
 
-- Feature A added
-- FIX: nasty bug #1729 fixed
-- add your changes here!
+- Add STAGE_MAP into the ASSUMPTION.xlsx
+- Add a basic CLI
+- Rename 'stage' in the account level data to 'watchlist' so that it is not confused with the stage produced by the model.
+
