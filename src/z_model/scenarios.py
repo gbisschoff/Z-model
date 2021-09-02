@@ -2,6 +2,7 @@ from pandas import read_excel, concat, DataFrame, date_range, merge
 from numpy import exp
 from functools import reduce
 from datetime import datetime
+from pathlib import Path
 import seaborn as sns
 from .series import Series
 
@@ -67,7 +68,7 @@ class Scenarios:
         return cls({s: Scenario(d) for s, d in data.groupby('SCENARIO')})
 
     @classmethod
-    def from_file(cls, url: str):
+    def from_file(cls, url: Path):
         """
         Create a `Scenarios` object from an Excel file containing scenario data.
         Args:
@@ -93,7 +94,7 @@ class Scenarios:
         return cls.from_dataframe(data)
 
     @classmethod
-    def from_assumptions(cls, url: str):
+    def from_assumptions(cls, url: Path):
         """
         Create a `Scenarios` object from an Excel file containing scenario assumptions.
         Args:

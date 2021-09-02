@@ -1,5 +1,6 @@
 from numpy import array
 from pandas import read_excel
+from pathlib import Path
 from .stage_map import StageMap
 
 def filter_dict(d: dict, k: str):
@@ -71,7 +72,7 @@ class Assumptions:
         return str(self)
 
     @classmethod
-    def from_file(cls, url: str, *args, **kwargs):
+    def from_file(cls, url: Path, *args, **kwargs):
         """
         Creates a dictionary of :obj:`Assumptions`.
 

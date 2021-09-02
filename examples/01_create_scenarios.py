@@ -9,9 +9,10 @@ Note: By setting sigma = 0 it becomes a deterministic forecast and only a single
 The Excel file (MONTE_CARLO_ASSUMPTIONS.xlsx) contains the parameters to create a set of independent scenarios.
 Each row in the excel file creates a new economic variable which is assumed to be independent of the rest.
 """
+from pathlib import Path
 from z_model.scenarios import Scenarios
 
-scenarios = Scenarios.from_assumptions(url='./data/MONTE_CARLO_ASSUMPTIONS.xlsx')
+scenarios = Scenarios.from_assumptions(url=Path('./data/MONTE_CARLO_ASSUMPTIONS.xlsx'))
 scenarios.plot('HPI')
 
 """
@@ -22,5 +23,5 @@ scenarios.as_dataframe().to_csv('./data/MONTE_CARLO_SIMULATIONS.csv')
 """
 Pre-defined scenarios can also be directly read in from an Excel file using the `.from_file` method.
 """
-scenarios = Scenarios.from_file('./data/SCENARIOS.xlsx')
+scenarios = Scenarios.from_file(Path('./data/SCENARIOS.xlsx'))
 scenarios.plot('HPI')

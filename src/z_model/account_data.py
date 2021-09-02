@@ -1,5 +1,6 @@
 from pandas import read_csv, read_excel, Int64Dtype, DataFrame
 from datetime import datetime
+from pathlib import Path
 
 
 class AccountData:
@@ -32,8 +33,8 @@ class AccountData:
         'watchlist': Int64Dtype()
     }
     FILE_TYPE_MAP = {
-        'XLSX': read_excel,
-        'CSV': read_csv
+        '.XLSX': read_excel,
+        '.CSV': read_csv
     }
 
     def __init__(self, data: DataFrame):
@@ -43,7 +44,7 @@ class AccountData:
         return len(self.data.index)
 
     @staticmethod
-    def file_extension(url: str):
+    def file_extension(url: Path):
         """
         Get the file extension from the `url`
 
@@ -53,10 +54,10 @@ class AccountData:
         Returns:
             str: the file extension (excl. the '.') in upper case.
         """
-        return url.split('.')[-1].upper()
+        return url.suffix.upper()
 
     @classmethod
-    def from_file(cls, url: str):
+    def from_file(cls, url: Path):
         """
         Create an `AccountData` object from an Excel or CSV file.
 

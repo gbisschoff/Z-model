@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-This is a skeleton file that can serve as a starting point for a Python
-console script. To run this script uncomment the following lines in the
+This is a CLI that can serve as a starting point for the Z-model.
+To run this script uncomment the following lines in the
 [options.entry_points] section in setup.cfg:
 
     console_scripts =
-         fibonacci = z_model.skeleton:run
+         z_model = z_model.skeleton:run
 
-Then run `python setup.py install` which will install the command `fibonacci`
+Then run `python setup.py install` which will install the command `z_model`
 inside your current environment.
 Besides console scripts, the header (i.e. until _logger...) of this file can
 also be used as template for Python modules.
-
-Note: This skeleton file can be safely removed if not needed!
 """
 
-import argparse
+import typer
+from typing import Optional
 import sys
 import logging
+from enum import Enum
+from pathlib import Path
 
 from z_model import __version__
 from z_model.assumptions import Assumptions
@@ -31,58 +32,12 @@ __license__ = "mit"
 
 _logger = logging.getLogger(__name__)
 
+app = typer.Typer()
 
-def parse_args(args):
-    """Parse command line parameters
-
-    Args:
-      args ([str]): command line parameters as list of strings
-
-    Returns:
-      :obj:`argparse.Namespace`: command line parameters namespace
-    """
-    parser = argparse.ArgumentParser(
-        description="Z-model CLI")
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"Z-model {__version__}")
-    parser.add_argument(
-        dest="assumptions",
-        help="file path to ASSUMPTIONS.xlsx",
-        type=str,
-        metavar="A")
-    parser.add_argument(
-        dest="scenarios",
-        help="file path to SCENARIOS.xlsx",
-        type=str,
-        metavar="S")
-    parser.add_argument(
-        dest="account_data",
-        help="file path to account_level_data.xlsx",
-        type=str,
-        metavar="D")
-    parser.add_argument(
-        dest="outfile",
-        help="output file path",
-        type=str,
-        metavar="O")
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="loglevel",
-        help="set loglevel to INFO",
-        action="store_const",
-        const=logging.INFO)
-    parser.add_argument(
-        "-vv",
-        "--very-verbose",
-        dest="loglevel",
-        help="set loglevel to DEBUG",
-        action="store_const",
-        const=logging.DEBUG)
-    return parser.parse_args(args)
-
+class Methods(str, Enum):
+    Map = 'map'
+    ProgressMap = 'process_map'
+    ThreadMap = 'thread_map'
 
 def setup_logging(loglevel):
     """Setup basic logging
@@ -91,41 +46,98 @@ def setup_logging(loglevel):
       loglevel (int): minimum loglevel for emitting messages
     """
     logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
-    logging.basicConfig(level=loglevel, stream=sys.stdout,
-                        format=logformat, datefmt="%Y-%m-%d %H:%M:%S")
+    logging.basicConfig(level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S")
 
 
-def main(args):
-    """Main entry point allowing external calls
-
-    Args:
-      args ([str]): command line parameter list
-    """
-    args = parse_args(args)
-    setup_logging(args.loglevel)
-    _logger.debug("Starting crazy calculations...")
+@app.command()
+def version():
+    return __version__
 
 
-    assumptions = Assumptions.from_file(url=args.assumptions)
-    scenarios = Scenarios.from_file(url=args.scenarios)
-    account_data = AccountData.from_file(url=args.account_data)
+@app.command()
+def run(
+        account_data: Path,
+        assumptions: Path,
+        scenarios: Path,
+        outfile: Path,
+        detailed_output: Optional[Path] = None,
+        monte_carlo: Optional[Path] = None,
+        method: Methods = Methods.Map,
+        verbose: bool = False
+):
+    '''
+    Run the Z-model on specified inputs.
 
-    results = Executor(method='process_map').execute(
+    Argumennts:
+
+    account_data (Path): path to the account level data file.
+    The file should be in .XLSX or  .CSV  format.
+
+    assumptions (Path): path to the assumptions file.
+    The file should be in .XLSX format.
+
+    scenarios (Path): the path to the macroeconomic scenarios or monte-carlo assumptions.
+    The file should be in .XLSX format. If monte-carlo assumptions are provided the --monte-carlo option should be
+    used.
+
+    outfile (Path): the path to the output file. Any standard Python Pandas file extension is supported.
+    However, it is recommended to use a compressed CSV file (.csv.gz).
+
+    detailed_output (Path): a path where the detailed forecasted results should be exported too.
+    This creates a very large file containing the parameters and marginal ECLs for each forecast horizon.
+    It is mainly used for debugging purposes. It is recommended to use a compressed CSV file (.csv.gz)
+
+    monte_carlo (Path): a flag specifying that the SCENARIOS inputs are monte-carlo assumptions and not discrete
+    scenarios. A path should be provided where the generated scenarios are saved. Depending on the number of scenarios
+    generated the file might become large. It is recommended to use a compressed CSV file (.csv.gz)
+
+    method (Methods): one of either 'map', 'process_map' or 'thread_map'. Depending on the selection the
+    execution engine changes.
+
+        map: map executes the all scenarios in series and might take longer to run.
+
+        process_map: executes the scenarios in parallel, but not all computers support parallel processing.
+
+        thread_map: executes the scenarios in a threaded manner, but not all computers support parallel
+        processing.
+
+    verbose (bool): a flag spefifying if debugging should be enabled.
+    '''
+    setup_logging(logging.INFO if not verbose else logging.DEBUG)
+    _logger.info(f'Debugging level set to {logging.INFO if not verbose else logging.DEBUG}')
+
+    _logger.info(f'Loading assumptions ({assumptions=}).')
+    assumptions = Assumptions.from_file(url=assumptions)
+    if monte_carlo:
+        _logger.info(f'Generating scenarios from monte-carlo assumptions ({scenarios=}).')
+        scenarios = Scenarios.from_assumptions(url=scenarios)
+        _logger.info(f'Saving monte-carlo scenarios ({monte_carlo=}).')
+        scenarios.as_dataframe().to_csv(monte_carlo, index=False)
+    else:
+        _logger.info(f'Loading discrete scenarios ({scenarios=}).')
+        scenarios = Scenarios.from_file(url=scenarios)
+
+    _logger.info(f'Loading account level data ({account_data=}).')
+    account_data = AccountData.from_file(url=account_data)
+
+    _logger.info('Starting calculations.')
+    results = Executor(method=method).execute(
         account_data=account_data,
         assumptions=assumptions,
         scenarios=scenarios
     )
 
-    results.long.to_csv(args.outfile, index=False)
+    if detailed_output:
+        _logger.info(f'Exporting detailed results ({detailed_output=}).')
+        results.data.reset_index().to_csv(detailed_output, index=False)
+
+    _logger.info(f'Exporting summarised results ({outfile=}).')
+    results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario', 'Stage']) \
+        .reset_index() \
+        .to_csv(outfile, index=False)
 
     _logger.info("Done.")
 
 
-def run():
-    """Entry point for console_scripts
-    """
-    main(sys.argv[1:])
-
-
 if __name__ == "__main__":
-    run()
+    app()

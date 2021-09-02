@@ -1,6 +1,6 @@
 from pandas import read_excel
 from numpy import array,  where
-
+from pathlib import Path
 
 class StageMap:
     def __init__(self, x):
@@ -17,7 +17,7 @@ class StageMap:
         })
 
     @classmethod
-    def from_file(cls, url, sheet_name = 'STAGE_MAP'):
+    def from_file(cls, url: Path, sheet_name = 'STAGE_MAP'):
         stage_map = read_excel(
             io=url,
             sheet_name=sheet_name,
