@@ -88,13 +88,15 @@ class Assumptions:
             sheet_name='ASSUMPTIONS',
             dtype=cls.DICTIONARY['ASSUMPTIONS'],
             index_col='segment_id',
-            usecols=cls.DICTIONARY['ASSUMPTIONS'].keys()
+            usecols=cls.DICTIONARY['ASSUMPTIONS'].keys(),
+            engine='openpyxl'
         )
         transition_matrices = read_excel(
             io=url,
             sheet_name='TRANSITION_MATRIX',
             dtype=cls.DICTIONARY['TRANSITION_MATRIX'],
-            index_col='segment_id'
+            index_col='segment_id',
+            engine='openpyxl'
         )
         stage_map = StageMap.from_file(url).x
 

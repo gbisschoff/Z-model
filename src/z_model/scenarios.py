@@ -89,7 +89,8 @@ class Scenarios:
                 'SCENARIO': str,
                 'DATE': datetime
             },
-            index_col='DATE'
+            index_col='DATE',
+            engine='openpyxl'
         )
         return cls.from_dataframe(data)
 
@@ -136,7 +137,8 @@ class Scenarios:
                 'm': int,
                 'fun': str
             },
-            index_col='NAME'
+            index_col='NAME',
+            engine='openpyxl'
         )
 
         def create_series(name, kwargs):

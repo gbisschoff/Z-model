@@ -1,7 +1,7 @@
 from pandas import read_csv, read_excel, Int64Dtype, DataFrame
 from datetime import datetime
 from pathlib import Path
-
+from .file_reader import read_file
 
 class AccountData:
     """
@@ -9,8 +9,7 @@ class AccountData:
 
     Attributes:
         DICTIONARY: data dictionary of account level data.
-        FILE_TYPE_MAP: dictionary mapping the file extension to a import function.
-            Only Excel (.xlsx) and CSV (.csv) are supported.
+
     """
     DICTIONARY = {
         'contract_id': str,
@@ -32,10 +31,6 @@ class AccountData:
         'current_rating': int,
         'watchlist': Int64Dtype()
     }
-    FILE_TYPE_MAP = {
-        '.XLSX': read_excel,
-        '.CSV': read_csv
-    }
 
     def __init__(self, data: DataFrame):
         self.data = data
@@ -43,26 +38,13 @@ class AccountData:
     def __len__(self):
         return len(self.data.index)
 
-    @staticmethod
-    def file_extension(url: Path):
-        """
-        Get the file extension from the `url`
-
-        Args:
-             url: the filepath.
-
-        Returns:
-            str: the file extension (excl. the '.') in upper case.
-        """
-        return url.suffix.upper()
-
     @classmethod
     def from_file(cls, url: Path):
         """
-        Create an `AccountData` object from an Excel or CSV file.
+        Create an `AccountData` object from a file.
 
         Args:
              url: relative path to the file
         """
-        data = cls.FILE_TYPE_MAP[cls.file_extension(url=url)](io=url, dtype=cls.DICTIONARY, index_col='contract_id')
+        data = read_file(url=url, dtype=cls.DICTIONARY, index_col='contract_id')
         return cls(data=data)

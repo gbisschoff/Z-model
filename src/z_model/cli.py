@@ -25,6 +25,7 @@ from z_model.assumptions import Assumptions
 from z_model.scenarios import Scenarios
 from z_model.account_data import AccountData
 from z_model.exeutor import Executor
+from .file_reader import write_file
 
 __author__ = "Geyer Bisschoff"
 __copyright__ = "Geyer Bisschoff"
@@ -71,7 +72,7 @@ def run(
     Argumennts:
 
     account_data (Path): path to the account level data file.
-    The file should be in .XLSX or  .CSV  format.
+    The file should be one of the supported file types.
 
     assumptions (Path): path to the assumptions file.
     The file should be in .XLSX format.
@@ -129,12 +130,14 @@ def run(
 
     if detailed_output:
         _logger.info(f'Exporting detailed results ({detailed_output=}).')
-        results.data.reset_index().to_csv(detailed_output, index=False)
+        write_file(results.data.reset_index(), detailed_output, index=False)
 
     _logger.info(f'Exporting summarised results ({outfile=}).')
-    results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario', 'Stage']) \
-        .reset_index() \
-        .to_csv(outfile, index=False)
+    write_file(
+        results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario', 'Stage']).reset_index(),
+        outfile,
+        index=False
+    )
 
     _logger.info("Done.")
 

@@ -22,6 +22,7 @@ class StageMap:
             io=url,
             sheet_name=sheet_name,
             dtype={'origination/current': str},
-            index_col='origination/current'
+            index_col='origination/current',
+            engine='openpyxl'
         )
         return cls.from_dataframe(stage_map)
