@@ -26,7 +26,7 @@ class Account:
         self.fixed_rate = fixed_rate
         self.spread = spread
         self.origination_date = origination_date
-        self.maturity_date = maturity_date
+        self._maturity_date = maturity_date
         self.reporting_date = reporting_date
         self.collateral_value = collateral_value
         self.contractual_payment = contractual_payment
@@ -36,8 +36,16 @@ class Account:
         self.watchlist = watchlist
 
     @property
+    def maturity_date(self):
+        return max(self._maturity_date, self.reporting_date + relativedelta(months=1))
+
+    @property
     def remaining_term(self):
-        return self.term - self.time_on_book
+        return max(self.term - self.time_on_book, 1)
+
+    @property
+    def past_maturity(self):
+        return self._maturity_date <= self.reporting_date
 
     @property
     def time_on_book(self):

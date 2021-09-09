@@ -113,7 +113,7 @@ def run(
         _logger.info(f'Generating scenarios from monte-carlo assumptions ({scenarios=}).')
         scenarios = Scenarios.from_assumptions(url=scenarios)
         _logger.info(f'Saving monte-carlo scenarios ({monte_carlo=}).')
-        scenarios.as_dataframe().to_csv(monte_carlo, index=False)
+        scenarios.as_dataframe().to_csv(monte_carlo)
     else:
         _logger.info(f'Loading discrete scenarios ({scenarios=}).')
         scenarios = Scenarios.from_file(url=scenarios)

@@ -39,7 +39,7 @@ class ExposureAtDefault:
 
     @classmethod
     def constant(cls, exposure_at_default: float, remaining_term: int, **kwargs):
-        return cls(array([exposure_at_default] * remaining_term))
+        return cls(array([exposure_at_default] * (remaining_term+1)))
 
     @classmethod
     def credit_conversion_factor(cls, ccf_method: str, outstanding_balance: float, limit: float, ccf: float, remaining_term: int, **kwargs):
