@@ -16,7 +16,7 @@ from .survival import Survival
 
 
 class Account:
-    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, fixed_rate, spread, origination_date, maturity_date, reporting_date, collateral_value, origination_rating, current_rating, watchlist, *args, **kwargs):
+    def __init__(self, assumptions: Assumptions, scenario: Scenario, outstanding_balance, current_arrears, contractual_payment, contractual_freq, interest_rate_type, interest_rate_freq, fixed_rate, spread, origination_date, maturity_date, reporting_date, remaining_life, collateral_value, origination_rating, current_rating, watchlist, *args, **kwargs):
         self.assumptions = assumptions
         self.scenario = scenario
         self.outstanding_balance = outstanding_balance
@@ -26,8 +26,9 @@ class Account:
         self.fixed_rate = fixed_rate
         self.spread = spread
         self.origination_date = origination_date
-        self._maturity_date = maturity_date
+        self.maturity_date = maturity_date
         self.reporting_date = reporting_date
+        self.remaining_life = remaining_life
         self.collateral_value = collateral_value
         self.contractual_payment = contractual_payment
         self.contractual_freq = contractual_freq
@@ -36,16 +37,13 @@ class Account:
         self.watchlist = watchlist
 
     @property
-    def maturity_date(self):
-        return max(self._maturity_date, self.reporting_date + relativedelta(months=1))
-
-    @property
     def remaining_term(self):
-        return max(self.term - self.time_on_book, 1)
+        return (self.maturity_date.year - self.reporting_date.year) * 12 + \
+               (self.maturity_date.month - self.reporting_date.month)
 
     @property
     def past_maturity(self):
-        return self._maturity_date <= self.reporting_date
+        return self.maturity_date <= self.reporting_date
 
     @property
     def time_on_book(self):
@@ -59,16 +57,16 @@ class Account:
 
     @property
     def collateral_index(self):
-        return self.scenario[self.assumptions['lgd']['collateral_index']][self.reporting_date:self.maturity_date+relativedelta(months=self.assumptions['lgd']['time_to_sale']+1)]
+        return self.scenario[self.assumptions['lgd']['collateral_index']][self.reporting_date:self.reporting_date + relativedelta(months=self.remaining_life + self.assumptions['lgd']['time_to_sale'] + 1)]
 
     @property
     def z_index(self):
-        return self.scenario[self.assumptions['pd']['z_index']][self.reporting_date:self.maturity_date+relativedelta(months=1)]
+        return self.scenario[self.assumptions['pd']['z_index']][self.reporting_date:self.reporting_date + relativedelta(months=self.remaining_life)]
 
     @property
     def base_rate(self):
         return self.scenario[self.assumptions['eir']['base_rate']][
-            self.reporting_date:self.maturity_date + relativedelta(months=self.assumptions['lgd']['time_to_sale'] + 1)]
+            self.reporting_date:self.reporting_date + relativedelta(months=self.remaining_life + self.assumptions['lgd']['time_to_sale'] + 1)]
 
     @property
     def collateral(self):
@@ -96,7 +94,7 @@ class Account:
             method=self.assumptions['ead']['type'],
             outstanding_balance=self.outstanding_balance,
             current_arrears=self.current_arrears,
-            remaining_term=self.remaining_term,
+            remaining_life=self.remaining_life,
             contractual_payment=self.contractual_payment,
             contractual_freq=self.contractual_freq,
             effective_interest_rate=self.effective_interest_rate,
@@ -184,7 +182,7 @@ class Account:
             loss_given_default=self.loss_given_default,
             effective_interest_rate=self.effective_interest_rate,
             outstanding_balance=self.outstanding_balance,
-            remaining_term=self.remaining_term
+            remaining_life=self.remaining_life
         )
 
     @property
@@ -195,7 +193,7 @@ class Account:
             .set_index(
                 date_range(
                     start=self.reporting_date,
-                    periods=self.remaining_term,
+                    periods=self.remaining_life,
                     freq='M',
                     name='forecast_reporting_date'
                 )

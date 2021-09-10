@@ -26,6 +26,7 @@ class AccountData:
         'origination_date': datetime,
         'maturity_date': datetime,
         'reporting_date': datetime,
+        'remaining_life': int,
         'collateral_value': float,
         'origination_rating': int,
         'current_rating': int,

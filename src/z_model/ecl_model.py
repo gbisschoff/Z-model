@@ -9,31 +9,31 @@ from .survival import Survival
 
 
 class ECLModel:
-    def __init__(self, stage_probability: StageProbability, exposure_at_default: ExposureAtDefault, survival: Survival, probability_of_default: ProbabilityOfDefault, loss_given_default: LossGivenDefault, effective_interest_rate: EffectiveInterestRate, outstanding_balance: float, remaining_term: int, *args, **kwargs):
+    def __init__(self, stage_probability: StageProbability, exposure_at_default: ExposureAtDefault, survival: Survival, probability_of_default: ProbabilityOfDefault, loss_given_default: LossGivenDefault, effective_interest_rate: EffectiveInterestRate, outstanding_balance: float, remaining_life: int, *args, **kwargs):
         self.stage_probability = stage_probability
         self.exposure_at_default = exposure_at_default
         self.survival = survival
         self.probability_of_default = probability_of_default
         self.loss_given_default = loss_given_default
         self.effective_interest_rate = effective_interest_rate
-        self.remaining_term = remaining_term
+        self.remaining_life = remaining_life
         self.outstanding_balance = outstanding_balance
 
     @property
     def results(self):
         result = DataFrame({
-            'S(t)': array([self.survival[:t] for t in range(self.remaining_term)]),
-            'PD(t)': self.probability_of_default.values[0:self.remaining_term],
-            'EAD(t)': self.exposure_at_default[0:self.remaining_term],
-            'EAD(t+1)': self.exposure_at_default[1:self.remaining_term+1],
-            'LGD(t)': self.loss_given_default[0:self.remaining_term],
-            'LGD(t+1)': self.loss_given_default[1:self.remaining_term+1],
-            'DF(t+1)': array([1 / (1 + self.effective_interest_rate[:t+1]) for t in range(self.remaining_term)]),
-            'P(S=1)': self.stage_probability[0:self.remaining_term, 0],
-            'P(S=2)': self.stage_probability[0:self.remaining_term, 1],
-            'P(S=3)': self.stage_probability[0:self.remaining_term, 2],
-            'P(S=WO)': self.stage_probability[0:self.remaining_term, 3],
-        }, index=range(self.remaining_term))
+            'S(t)': array([self.survival[:t] for t in range(self.remaining_life)]),
+            'PD(t)': self.probability_of_default.values[0:self.remaining_life],
+            'EAD(t)': self.exposure_at_default[0:self.remaining_life],
+            'EAD(t+1)': self.exposure_at_default[1:self.remaining_life + 1],
+            'LGD(t)': self.loss_given_default[0:self.remaining_life],
+            'LGD(t+1)': self.loss_given_default[1:self.remaining_life + 1],
+            'DF(t+1)': array([1 / (1 + self.effective_interest_rate[:t+1]) for t in range(self.remaining_life)]),
+            'P(S=1)': self.stage_probability[0:self.remaining_life, 0],
+            'P(S=2)': self.stage_probability[0:self.remaining_life, 1],
+            'P(S=3)': self.stage_probability[0:self.remaining_life, 2],
+            'P(S=WO)': self.stage_probability[0:self.remaining_life, 3],
+        }, index=range(self.remaining_life))
         result.index.name = 'T'
         result['Marginal CR(t)'] = result['S(t)'] * result['PD(t)'] * result['EAD(t+1)'] * result['LGD(t+1)'] * result['DF(t+1)']
         result['STAGE1(t)'] = (result['Marginal CR(t)'][::-1].cumsum() - result['Marginal CR(t)'][::-1].cumsum().shift(12).fillna(0)) * result['DF(t+1)'][0] / result['DF(t+1)']
