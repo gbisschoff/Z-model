@@ -6,6 +6,18 @@ class StageMap:
     def __init__(self, x):
         self.x = x
 
+    def __getitem__(self, item):
+        return self.x[item]
+
+    def keys(self):
+        return self.x.keys()
+
+    def items(self):
+        return self.x.items()
+
+    def values(self):
+        return self.x.values()
+
     @classmethod
     def from_dataframe(cls, df):
         return cls({

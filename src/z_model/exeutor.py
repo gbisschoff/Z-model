@@ -6,6 +6,7 @@ from .assumptions import Assumptions
 from .scenarios import Scenarios
 from .account_data import AccountData
 from .results import Results
+from .ecl_model import ECLModel
 
 
 class Executor:
@@ -21,13 +22,21 @@ class Executor:
     @staticmethod
     def _run_scenario(args):
         name, scenario, assumptions, account_data = args
-        results = []
-        for contract_id, d in tqdm(account_data.data.iterrows(), desc=f'Model (Scenario: {name})', total=len(account_data.data.index), leave=False, position=1):
-            d['assumptions'] = assumptions[d['segment_id']]
-            d['scenario'] = scenario
-            r = Account(**d).results.assign(**{'contract_id': contract_id, 'scenario': name})
-            results.append(r)
-        return concat(results)
+        ecl_models = {
+            segment_id: ECLModel.from_assumptions(
+                segment_assumptions=assumptions,
+                scenario=scenario
+            )
+            for segment_id, assumptions in assumptions.items()
+        }
+
+        data = account_data.data.reset_index()
+        data['Account()'] = data.apply(lambda x: Account(**x), axis=1)
+        data['ECLModel()'] = data['segment_id'].map(ecl_models)
+        data['ECL()'] = data.apply(lambda x: x['ECLModel()'][x['Account()']], axis=1)
+        rs = concat(data['ECL()'].values)
+        rs['scenario'] = name
+        return rs
 
     def execute(self, account_data: AccountData, assumptions: Assumptions, scenarios: Scenarios):
         """

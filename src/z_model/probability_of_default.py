@@ -1,43 +1,53 @@
 from scipy.stats import norm as normal
-from numpy import array, prod as product
-from pandas import Series
+from numpy import array, prod as product, repeat, diff, stack, insert, divide, zeros_like
+from pandas import Series, DataFrame
+from .scenarios import Scenario
 from .transition_matrix import TransitionMatrix
+from .account import Account
+from .assumptions import PDAssumptions
+
+class ConstantProbabilityOfDefault:
+    def __init__(self, probability_of_default: float, frequency: int = 12, **kwargs):
+        self.probability_of_default = probability_of_default
+        self.frequency = frequency
+        self.hazard = 1 - (1 - self.probability_of_default) ** (1 / self.frequency)
+
+    def __getitem__(self, account: Account):
+        return Series(self.hazard, index=account.remaining_life_index)
+
+
+class MertonVasicekProbabilityOfDefault:
+    def __init__(self, probability_of_default: float, rho: float, scenario: Scenario, frequency: int = 12, **kwargs):
+        self.probability_of_default = probability_of_default
+        self.rho = rho
+        self.frequency = frequency
+        self.z_index = scenario.z_index
+        self.hazard = normal.cdf((normal.ppf(1 - (1 - self.probability_of_default) ** (1 / self.frequency)) - self.rho ** 0.5 * self.z_index) / (1 - self.rho) ** 0.5)
+
+    def __getitem__(self, account: Account):
+        return self.hazard[account.remaining_life_index]
+
+
+class TransitionMatrixProbabilityOfDefault:
+    def __init__(self, transition_matrix: TransitionMatrix, default_state: int = -1, **kwargs):
+        self.transition_matrix = transition_matrix
+        self.default_state = default_state
+
+    def __getitem__(self, account: Account):
+        cum = self.transition_matrix.get_cumulative(account.remaining_life_index, return_list=True)
+        cum_a = insert(stack(cum)[:, account.current_rating, self.default_state], 0, 0)
+        marginal_pd = diff(cum_a)
+        s = 1 - cum_a[:-1]
+        h = divide(marginal_pd, s, out=zeros_like(s, dtype=float), where=s>0)
+        return Series(h, index=account.remaining_life_index)
 
 
 class ProbabilityOfDefault:
-    def __init__(self, x: array):
-        self.x = x
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, t):
-        if isinstance(t, slice):
-            return 1 - product(1 - self.x[t])
+    @classmethod
+    def from_assumptions(cls, assumptions:  PDAssumptions, transition_matrix: TransitionMatrix):
+        if assumptions.type.upper() == 'TRANSITION_MATRIX':
+            return TransitionMatrixProbabilityOfDefault(transition_matrix)
         else:
-            return self.x[t]
+            raise ValueError(f'Only TransitionMatrix PDs are supported.')
 
-    @property
-    def values(self):
-        return self.x
 
-    @classmethod
-    def from_assumptions(cls, method: str, **kwargs):
-        return {
-            'CONSTANT': cls.constant,
-            'MERTON_VASICEK': cls.merton_vasicek,
-            'TRANSITION_MATRIX': cls.transition_matrix
-        }.get(method.upper())(**kwargs)
-
-    @classmethod
-    def transition_matrix(cls, transition_matrix: TransitionMatrix, current_state: int, default_state: int = -1, **kwargs):
-        cumulative_pd_curve = Series(transition_matrix.get_cumulative(0, len(transition_matrix), return_list=True)[1:, current_state, default_state])
-        return cls(array(((cumulative_pd_curve - cumulative_pd_curve.shift(1).fillna(0)) / (1 - cumulative_pd_curve.shift(1).fillna(0))).fillna(1)))
-
-    @classmethod
-    def merton_vasicek(cls, ttc_probability_of_default: float, rho: float, z: array, freq: int = 12, **kwargs):
-        return cls(normal.cdf((normal.ppf(1 - (1-ttc_probability_of_default) ** (1/freq)) - rho ** 0.5 * z) / (1-rho) ** 0.5))
-
-    @classmethod
-    def constant(cls, ttc_probability_of_default: float, freq: int = 12, **kwargs):
-        return cls(array([1 - (1-ttc_probability_of_default) ** (1/freq)] * 35 * 12))

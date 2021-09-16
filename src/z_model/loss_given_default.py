@@ -1,45 +1,89 @@
-from numpy import array
-from .collateral import Collateral
+from numpy import repeat, array, maximum, zeros
+from pandas import Series
+from dateutil.relativedelta import relativedelta
+from .account import Account
+from .scenarios import Scenario
 from .effective_interest_rate import EffectiveInterestRate
+from .exposure_at_default import ExposureAtDefault
+from .assumptions import LGDAssumptions
+
+class SecuredLossGivenDefault:
+    def __init__(self, probability_of_cure: float, loss_given_cure: float,  time_to_sale: int, forced_sale_discount: float, sales_cost: float, floor: float, exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate, collateral_index: array, **kwargs):
+        self.probability_of_cure = probability_of_cure
+        self.loss_given_cure = loss_given_cure
+        self.time_to_sale = time_to_sale
+        self.forced_sale_discount = forced_sale_discount
+        self.sales_cost = sales_cost
+        self.floor = floor
+        self.exposure_at_default = exposure_at_default
+        self.effecive_interest_rate = effective_interest_rate
+        self.collateral_index = collateral_index
+
+    def __getitem__(self, account: Account):
+        ead = self.exposure_at_default[account]
+        eir = self.effecive_interest_rate[account]
+        ci = self.collateral_index.shift(-self.time_to_sale)[account.remaining_life_index] / self.collateral_index[account.reporting_date]
+        df = (1 + eir) ** -self.time_to_sale
+
+        lgd = maximum(
+            self.probability_of_cure * self.loss_given_cure +
+            (1 - self.probability_of_cure) * (
+                maximum(account.outstanding_balance * ead - account.collateral_value * ci * (1 - self.forced_sale_discount - self.sales_cost) * df, 0) / (account.outstanding_balance * ead)
+            ),
+            self.floor
+        )
+        return lgd
+
+
+class UnsecuredLossGivenDefault:
+    def __init__(self, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float, **kwargs):
+        self.probability_of_cure = probability_of_cure
+        self.loss_given_cuve = loss_given_cure
+        self.loss_given_write_off = loss_given_write_off
+
+    def __getitem__(self, account: Account):
+        return Series(
+             self.probability_of_cure * self.loss_given_cuve +
+             (1 - self.probability_of_cure) * self.loss_given_write_off,
+            index=account.remaining_life_index
+        )
+
+
+class ConstantLossGivenDefault:
+    def __init__(self, loss_given_default: float, **kwargs):
+        self.loss_given_default = loss_given_default
+
+    def __getitem__(self, account: Account):
+        return Series(
+            self.loss_given_default,
+            index=account.remaining_life_index
+        )
 
 
 class LossGivenDefault:
-    def __init__(self, loss_given_default: array):
-        self.loss_given_default = loss_given_default
-
-    def __len__(self):
-        return len(self.loss_given_default)
-
-    def __getitem__(self, t):
-        return self.loss_given_default[t]
-
     @classmethod
-    def secured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, exposure_at_default: array, collateral: Collateral, time_to_sale: int, forced_sale_discount: float, sales_cost: float, effective_interest_rate: EffectiveInterestRate, floor: float, **kwargs):
-        return cls(array([
-            probability_of_cure * \
-            loss_given_cure + \
-            (1 - probability_of_cure) * \
-            max(
-                (exposure_at_default[t] - collateral[int(t + time_to_sale)] * (1 - forced_sale_discount - sales_cost) /
-                 (1 + effective_interest_rate[t: int(t + time_to_sale)])) / exposure_at_default[t],
-                floor
+    def from_assumptions(cls, assumptions: LGDAssumptions, ead: ExposureAtDefault, eir: EffectiveInterestRate, scenario: Scenario):
+        if assumptions.type.upper() == 'SECURED':
+            return SecuredLossGivenDefault(
+                probability_of_cure=assumptions.probability_of_cure,
+                loss_given_cure=assumptions.loss_given_cure,
+                time_to_sale=assumptions.time_to_sale,
+                forced_sale_discount=assumptions.forced_sale_discount,
+                sales_cost=assumptions.sale_cost,
+                floor=assumptions.floor,
+                exposure_at_default=ead,
+                effective_interest_rate=eir,
+                collateral_index=scenario[assumptions.collateral_index]
             )
-            for t in range(len(exposure_at_default))
-        ]))
-
-    @classmethod
-    def unsecured_loss_given_default(cls, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float, **kwargs):
-        return cls(array([probability_of_cure * loss_given_cure + (1 - probability_of_cure) * loss_given_write_off] * 35 * 12))
-
-    @classmethod
-    def constant(cls, loss_given_default: float, **kwargs):
-        return cls(array([loss_given_default] * 35 * 12))
-
-    @classmethod
-    def from_assumptions(cls, method: str, **kwargs):
-        switcher = {
-            'SECURED': cls.secured_loss_given_default,
-            'UNSECURED': cls.unsecured_loss_given_default,
-            'CONSTANT': cls.constant
-        }
-        return switcher.get(method.upper())(**kwargs)
+        elif assumptions.type.upper() == 'UNSECURED':
+            return UnsecuredLossGivenDefault(
+                probability_of_cure=assumptions.probability_of_cure,
+                loss_given_cure=assumptions.loss_given_cure,
+                loss_given_write_off=assumptions.loss_given_write_off
+            )
+        elif assumptions.type.upper() == 'CONSTANT':
+            return ConstantLossGivenDefault(
+                loss_given_default=assumptions.loss_given_default
+            )
+        else:
+            raise ValueError(f'Invalid LGD type: {assumptions.type}')

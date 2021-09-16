@@ -1,31 +1,39 @@
-from numpy import array, zeros, prod as product
+from numpy import repeat, array
+from pandas import Series
+from .account import Account
+from .scenarios import Scenario
+from .assumptions import EIRAssumptions
 
+class FixedEffectiveInterestRate:
+    def __init__(self, **kwargs):
+        pass
+
+    def __getitem__(self, account: Account):
+        return Series(repeat((1 + account.fixed_rate) ** (1 / account.interest_rate_freq) - 1,  account.remaining_life), index=account.remaining_life_index)
+
+class FloatEffectiveInterestRate:
+    def __init__(self, base_rate: array, **kwargs):
+        self.base_rate = base_rate
+
+    def __getitem__(self, account: Account):
+        return (1 + account.spread + self.base_rate[account.remaining_life_index]) ** (1 /  account.interest_rate_freq) - 1
 
 class EffectiveInterestRate:
-    def __init__(self, x: array):
-        self.x = x
+    def __init__(self, fixed_eir: FixedEffectiveInterestRate, float_eir: FloatEffectiveInterestRate):
+        self.fixed_eir = fixed_eir
+        self.float_eir = float_eir
 
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, t):
-        if isinstance(t, slice):
-            return product(1 + self.x[t]) - 1
+    def __getitem__(self, account: Account):
+        if account.interest_rate_type.upper() == 'FIXED':
+            return self.fixed_eir[account]
+        elif account.interest_rate_type.upper() == 'FLOAT':
+            return self.float_eir[account]
         else:
-            return self.x[t]
+            return ValueError(f'Invalid interest rate type: {account.contract_id=}, {account.interest_rate_type=}')
 
     @classmethod
-    def from_assumptions(cls, method, **kwargs):
-        return {
-            'FIXED': cls.fixed_rate,
-            'FLOAT': cls.float_rate
-        }.get(method.upper())(**kwargs)
-
-    @classmethod
-    def fixed_rate(cls, fixed_rate: float, frequency: int = 12, **kwargs):
-        return cls(array([(1 + fixed_rate) ** (1 / frequency) - 1] * 35 * 12))
-
-    @classmethod
-    def float_rate(cls, spread: float, base_rate: array = None, frequency: int = 12, **kwargs):
-        base_rate = zeros(35*12) if base_rate is None else base_rate
-        return cls((1 + spread + base_rate) ** (1 / frequency) - 1)
+    def from_assumptions(cls, assumptions: EIRAssumptions, scenario: Scenario):
+        return cls(
+            FixedEffectiveInterestRate(),
+            FloatEffectiveInterestRate(scenario[assumptions.base_rate])
+        )

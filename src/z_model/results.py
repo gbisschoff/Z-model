@@ -19,7 +19,7 @@ class Results:
             for s in [1, 2, 3]
         })
         rs.rename(columns={f'P(S={s})': f'P(S=s)_{s}' for s in [1, 2, 3, 'WO']} | {'Write-off(t)': 'Exposure(t)_WO'}, inplace=True)
-        rs.drop(columns=['S(t)', 'PD(t)', 'EAD(t)', 'EAD(t+1)', 'LGD(t)', 'LGD(t+1)', 'DF(t+1)', 'Marginal CR(t)',
+        rs.drop(columns=['S(t)', 'PD(t)', 'EAD(t)', 'LGD(t)', 'Marginal CR(t)',
                          'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)', 'CR(t)', 'Exposure(t)', 'ECL(t)'],
                 inplace=True)
         rs['ECL(t)_WO'] = rs['Exposure(t)_WO']
