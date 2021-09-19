@@ -22,7 +22,8 @@ class MertonVasicekProbabilityOfDefault:
         self.rho = rho
         self.frequency = frequency
         self.z_index = scenario.z_index
-        self.hazard = normal.cdf((normal.ppf(1 - (1 - self.probability_of_default) ** (1 / self.frequency)) - self.rho ** 0.5 * self.z_index) / (1 - self.rho) ** 0.5)
+        ttc = normal.ppf(1 - (1 - self.probability_of_default) ** (1 / self.frequency))
+        self.hazard = normal.cdf(ttc - self.z_index * (self.rho ** 0.5)/(1 - self.rho) ** 0.5)
 
     def __getitem__(self, account: Account):
         return self.hazard[account.remaining_life_index]

@@ -72,7 +72,7 @@ class TransitionMatrix:
             return default_barrier_matrix
 
         def z_default_distance(default_distance_vector, rho, z):
-            return (default_distance_vector + rho ** 0.5 * z) / (1 - rho) ** 0.5
+            return default_distance_vector + z * (rho ** 0.5) / (1 - rho) ** 0.5
 
         def transition_matrix(default_barrier_matrix, z_dd, default_state, delta):
             n = len(default_barrier_matrix)
