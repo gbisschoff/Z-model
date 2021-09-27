@@ -1,7 +1,7 @@
 from scipy.stats import norm as normal
 from functools import reduce
 from scipy.linalg import fractional_matrix_power
-from numpy import array, sum, abs, cumsum, newaxis, diff
+from numpy import array, sum, abs, cumsum, newaxis, diff, expand_dims, append, identity, stack
 from pandas import Series, DatetimeIndex
 from dateutil.relativedelta import relativedelta
 
@@ -25,17 +25,20 @@ class TransitionMatrix:
         return self.x.index
 
     def get_cumulative(self, idx, return_list=False):
+        i = expand_dims(identity(self.shape[-1][0]), axis=0)
+        x = append(i, stack(self[idx].values)[:-1], axis=0)
+
         if return_list:
             return Series(
                 self.matrix_cumulative_prod(
-                    self[idx],
+                    x,
                     return_list=True
                 ),
                 index=idx
             )
         else:
             return self.matrix_cumulative_prod(
-                self[idx],
+                x,
                 return_list=False
             )
 
@@ -48,7 +51,7 @@ class TransitionMatrix:
             return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
 
     @classmethod
-    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, freq: int = 12, **kwargs):
+    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, freq: int = 12, calibrated = True, **kwargs):
 
         def fraction_matrix(x, freq):
             rs = fractional_matrix_power(x, 1 / freq)
@@ -63,5 +66,9 @@ class TransitionMatrix:
 
         default_distance = normal.ppf(cttc)
         za = z.values[:, newaxis, newaxis]
-        pit = diff(normal.cdf(default_distance + za * (rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+        if calibrated:
+            pit = diff(normal.cdf(default_distance + za * (rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+        else:
+            pit = diff(normal.cdf((default_distance + za * rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+
         return cls(Series(list(pit), index=z.index))

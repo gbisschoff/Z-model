@@ -4,12 +4,14 @@ from pathlib import Path
 from .stage_map import StageMap
 
 class PDAssumptions:
-    def __init__(self, type: str, z_index: str, rho: float, redemption_rate: float, redemption_freq: float, transition_matrix: array):
+    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, default_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array):
         self.type = type
         self.z_index = z_index
         self.rho = rho
-        self.redemption_rate = redemption_rate
-        self.redemption_freq = redemption_freq
+        self.calibrated = calibrated
+        self.default_state = default_state
+        self.frequency = frequency
+        self.time_in_watchlist = time_in_watchlist
         self.transition_matrix = transition_matrix
 
 
@@ -73,8 +75,10 @@ class Assumptions(dict):
             'pd_type': str,
             'pd_z_index': str,
             'pd_rho': float,
-            'pd_redemption_rate': float,
-            'pd_redemption_freq': int,
+            'pd_calibrated': bool,
+            'pd_default_state': int,
+            'pd_frequency': int,
+            'pd_time_in_watchlist': int,
             'lgd_type': str,
             'lgd_loss_given_default': float,
             'lgd_collateral_index': str,
@@ -141,8 +145,10 @@ class Assumptions(dict):
                     type = d['pd_type'],
                     z_index = d['pd_z_index'],
                     rho = d['pd_rho'],
-                    redemption_rate = d['pd_redemption_rate'],
-                    redemption_freq = d['pd_redemption_freq'],
+                    calibrated = d['pd_calibrated'],
+                    default_state = d['pd_default_state'],
+                    frequency = d['pd_frequency'],
+                    time_in_watchlist = d['pd_time_in_watchlist'],
                     transition_matrix = array(transition_matrices.drop(columns='from').loc[segment_id]),
                 ),
                 ead=EADAssumptions(

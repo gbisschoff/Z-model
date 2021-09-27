@@ -1,6 +1,8 @@
 # Z-Model
 
-A simple IFRS 9 and Stress Testing Credit Risk Model.
+A simple IFRS9 and Stress Testing Credit Risk Model.
+
+$$ECL(T) = \displaystyle\sum_{t=T}^{lifetime} \sum_{r \neq D} P[R_t = r | R_{t_0} = C] \times P[R_{t+1} = D | R_t = r] \times EAD(t) \times LGD(t)$$
 
 ## Getting Started
 ### Requirements:
