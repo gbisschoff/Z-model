@@ -2,7 +2,22 @@
 
 A simple IFRS9 and Stress Testing Credit Risk Model.
 
-$$ECL(T) = \displaystyle\sum_{t=T}^{lifetime} \sum_{r \neq D} P[R_t = r | R_{t_0} = C] \times P[R_{t+1} = D | R_t = r] \times EAD(t) \times LGD(t)$$
+The expected credit loss (ECL) is calculated using a marginal loss framework as follows:
+
+![ECL Formula](./img/ECL-formula.png)
+
+The transition probabilities in the above formula are calculated using the 
+[Z risk engine](https://www.z-riskengine.com/media/1032/a-one-parameter-representation-of-credit-risk-and-transition-matrices.pdf) 
+framework. The model allows for both single default definition and multiple default definition probabilities to be 
+calculated by configuring the TtC Transition Matrix, in the assumptions file, to allow for the probability of 
+transitioning back to a performing state.
+
+The loss given default can be calculated in various different methods to allow for secured and unsecured portfolios. The
+secured LGDs are made FiT by a collateral index adjustment. Unsecured LGDs are assumed to be constant throughout
+the economic cycle.
+
+The exposure at default can be calculated in various ways, e.g. amortising, constant or using one of the credit 
+conversion factor methods to cater of different product characteristics. 
 
 ## Getting Started
 ### Requirements:
