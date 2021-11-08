@@ -1,4 +1,4 @@
-from numpy import array, repeat, arange, cumprod, cumsum
+from numpy import array, repeat, arange, cumprod, cumsum, maximum
 from pandas import Series
 from .account import Account
 from .effective_interest_rate import EffectiveInterestRate
@@ -46,7 +46,7 @@ class AmortisingExposureAtDefault:
         arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
         arrears_t = cumsum(arrears_t0) / df_t0
 
-        ead = (balance_t_pfees + arrears_t) / account.outstanding_balance
+        ead = maximum(balance_t_pfees + arrears_t / account.outstanding_balance, 0)
 
         return Series(ead, index=account.remaining_life_index)
 
