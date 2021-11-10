@@ -83,9 +83,9 @@ class TransitionMatrix:
             DD = tile(B[:, default_state, newaxis], ttc.shape[-1])
 
             if calibrated:
-                pit_dd = (DD - (za * rho ** 0.5) / (1 - rho) ** 0.5)
+                pit_dd = (DD + (za * rho ** 0.5) / (1 - rho) ** 0.5)
             else:
-                pit_dd = ((DD - za * rho ** 0.5) / (1 - rho) ** 0.5)
+                pit_dd = ((DD + za * rho ** 0.5) / (1 - rho) ** 0.5)
 
             BS = tile(subtract(B, DD, out=B, where=abs(B) != inf), (len(z), 1, 1))
             pit = diff(normal.cdf(add(BS, pit_dd, out=BS, where=abs(BS) != inf)), append=1)
