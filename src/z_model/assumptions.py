@@ -4,7 +4,7 @@ from pathlib import Path
 from .stage_map import StageMap
 
 class PDAssumptions:
-    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, default_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array):
+    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, default_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array, method:str):
         self.type = type
         self.z_index = z_index
         self.rho = rho
@@ -13,6 +13,7 @@ class PDAssumptions:
         self.frequency = frequency
         self.time_in_watchlist = time_in_watchlist
         self.transition_matrix = transition_matrix
+        self.method = method
 
 
 class LGDAssumptions:
@@ -73,6 +74,7 @@ class Assumptions(dict):
             'segment_name': str,
             'segment_id': int,
             'pd_type': str,
+            'pd_method': str,
             'pd_z_index': str,
             'pd_rho': float,
             'pd_calibrated': bool,
@@ -143,6 +145,7 @@ class Assumptions(dict):
                 name=d['segment_name'],
                 pd=PDAssumptions(
                     type = d['pd_type'],
+                    method = d['pd_method'],
                     z_index = d['pd_z_index'],
                     rho = d['pd_rho'],
                     calibrated = d['pd_calibrated'],

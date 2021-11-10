@@ -1,7 +1,7 @@
 from scipy.stats import norm as normal
 from functools import reduce
 from scipy.linalg import fractional_matrix_power
-from numpy import array, sum, abs, cumsum, newaxis, diff, expand_dims, append, identity, stack
+from numpy import array, sum, abs, cumsum, newaxis, diff, expand_dims, append, identity, stack, add, tile, flip, subtract, inf
 from pandas import Series, DatetimeIndex
 from dateutil.relativedelta import relativedelta
 
@@ -51,7 +51,7 @@ class TransitionMatrix:
             return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
 
     @classmethod
-    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, freq: int = 12, calibrated = True, **kwargs):
+    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, default_state:int=-1, freq: int = 12, calibrated:bool = True, method:str = 'METHOD-1', **kwargs):
 
         def fraction_matrix(x, freq):
             rs = fractional_matrix_power(x, 1 / freq)
@@ -60,15 +60,37 @@ class TransitionMatrix:
             return rs
 
         ttc = fraction_matrix(ttc_transition_matrix, freq)
-        cttc = cumsum(ttc, axis=1)
-        cttc[cttc > 1] = 1
-        cttc[cttc < 0] = 0
-
-        default_distance = normal.ppf(cttc)
         za = z.values[:, newaxis, newaxis]
-        if calibrated:
-            pit = diff(normal.cdf(default_distance + za * (rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+
+        if method.upper() == 'METHOD-1':
+            cttc = cumsum(ttc, axis=1)
+            cttc[cttc > 1] = 1
+            cttc[cttc < 0] = 0
+
+            default_distance = normal.ppf(cttc)
+
+            if calibrated:
+                pit = diff(normal.cdf(default_distance + za * (rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+            else:
+                pit = diff(normal.cdf((default_distance + za * rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+
+        elif method.upper() == 'METHOD-2':
+            cttc = flip(cumsum(flip(ttc, axis=1), axis=1), axis=1)
+            cttc[cttc > 1] = 1
+            cttc[cttc < 0] = 0
+
+            B = -normal.ppf(cttc)
+            DD = tile(B[:, default_state, newaxis], ttc.shape[-1])
+
+            if calibrated:
+                pit_dd = (DD - (za * rho ** 0.5) / (1 - rho) ** 0.5)
+            else:
+                pit_dd = ((DD - za * rho ** 0.5) / (1 - rho) ** 0.5)
+
+            BS = tile(subtract(B, DD, out=B, where=abs(B) != inf), (len(z), 1, 1))
+            pit = diff(normal.cdf(add(BS, pit_dd, out=BS, where=abs(BS) != inf)), append=1)
+
         else:
-            pit = diff(normal.cdf((default_distance + za * rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+            raise ValueError(f'Method not supported: {method}')
 
         return cls(Series(list(pit), index=z.index))

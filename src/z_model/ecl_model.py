@@ -78,7 +78,9 @@ class ECLModel:
             rho=segment_assumptions.pd.rho,
             z=scenario[segment_assumptions.pd.z_index],
             freq=segment_assumptions.pd.frequency,
-            calibrated=segment_assumptions.pd.calibrated
+            calibrated=segment_assumptions.pd.calibrated,
+            default_state=segment_assumptions.pd.default_state,
+            method=segment_assumptions.pd.method
         )
         eir = EffectiveInterestRate.from_assumptions(segment_assumptions.eir, scenario)
         sp = StageProbability(
