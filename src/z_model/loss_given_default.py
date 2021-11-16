@@ -1,4 +1,4 @@
-from numpy import repeat, array, maximum, zeros
+from numpy import repeat, array, maximum, zeros, arange
 from pandas import Series
 from dateutil.relativedelta import relativedelta
 from .account import Account
@@ -8,7 +8,7 @@ from .exposure_at_default import ExposureAtDefault
 from .assumptions import LGDAssumptions
 
 class SecuredLossGivenDefault:
-    def __init__(self, probability_of_cure: float, loss_given_cure: float,  time_to_sale: int, forced_sale_discount: float, sales_cost: float, floor: float, exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate, collateral_index: array, **kwargs):
+    def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int, forced_sale_discount: float, sales_cost: float, floor: float, exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate, index: array, **kwargs):
         self.probability_of_cure = probability_of_cure
         self.loss_given_cure = loss_given_cure
         self.time_to_sale = time_to_sale
@@ -17,12 +17,12 @@ class SecuredLossGivenDefault:
         self.floor = floor
         self.exposure_at_default = exposure_at_default
         self.effecive_interest_rate = effective_interest_rate
-        self.collateral_index = collateral_index
+        self.index = index
 
     def __getitem__(self, account: Account):
         ead = self.exposure_at_default[account]
         eir = self.effecive_interest_rate[account]
-        ci = self.collateral_index.shift(-self.time_to_sale)[account.remaining_life_index] / self.collateral_index[account.reporting_date]
+        ci = self.index.shift(-self.time_to_sale)[account.remaining_life_index] / self.index[account.reporting_date]
         df = (1 + eir) ** -self.time_to_sale
 
         lgd = maximum(
@@ -32,7 +32,10 @@ class SecuredLossGivenDefault:
             ),
             self.floor
         )
-        return lgd
+        return Series(
+            lgd,
+            index=account.remaining_life_index
+        )
 
 
 class UnsecuredLossGivenDefault:
@@ -59,6 +62,52 @@ class ConstantLossGivenDefault:
             index=account.remaining_life_index
         )
 
+class ConstantGrowthLossGivenDefault:
+    def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int,
+                 forced_sale_discount: float, sales_cost: float, floor: float,
+                 exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate,
+                 growth_rate: float, **kwargs):
+        self.probability_of_cure = probability_of_cure
+        self.loss_given_cure = loss_given_cure
+        self.time_to_sale = time_to_sale
+        self.forced_sale_discount = forced_sale_discount
+        self.sales_cost = sales_cost
+        self.floor = floor
+        self.exposure_at_default = exposure_at_default
+        self.effecive_interest_rate = effective_interest_rate
+        self.growth_rate = growth_rate
+
+    def __getitem__(self, account: Account):
+        ead = self.exposure_at_default[account]
+        eir = self.effecive_interest_rate[account]
+        ci = (1 + self.growth_rate) ** ((self.time_to_sale + arange(account.remaining_life)) / 12)
+        df = (1 + eir) ** -self.time_to_sale
+
+        lgd = maximum(
+            self.probability_of_cure * self.loss_given_cure +
+            (1 - self.probability_of_cure) * (
+                    maximum(account.outstanding_balance * ead - account.collateral_value * ci * (
+                                1 - self.forced_sale_discount - self.sales_cost) * df, 0) / (
+                                account.outstanding_balance * ead)
+            ),
+            self.floor
+        )
+        return Series(
+            lgd,
+            index=account.remaining_life_index
+        )
+
+
+class IndexedLossGivenDefault:
+    def __init__(self, loss_given_default: float, index:array, **kwargs):
+        self.loss_given_default = loss_given_default
+        self.index = index
+
+    def __getitem__(self, account: Account):
+        return Series(
+            self.loss_given_default * self.index[account.remaining_life_index] / self.index[account.reporting_date],
+            index=account.remaining_life_index
+        )
 
 class LossGivenDefault:
     @classmethod
@@ -73,7 +122,7 @@ class LossGivenDefault:
                 floor=assumptions.floor,
                 exposure_at_default=ead,
                 effective_interest_rate=eir,
-                collateral_index=scenario[assumptions.collateral_index]
+                index=scenario[assumptions.index]
             )
         elif assumptions.type.upper() == 'UNSECURED':
             return UnsecuredLossGivenDefault(
@@ -84,6 +133,23 @@ class LossGivenDefault:
         elif assumptions.type.upper() == 'CONSTANT':
             return ConstantLossGivenDefault(
                 loss_given_default=assumptions.loss_given_default
+            )
+        elif assumptions.type.upper() == 'CONSTANT-GROWTH':
+            return ConstantGrowthLossGivenDefault(
+                probability_of_cure=assumptions.probability_of_cure,
+                loss_given_cure=assumptions.loss_given_cure,
+                time_to_sale=assumptions.time_to_sale,
+                forced_sale_discount=assumptions.forced_sale_discount,
+                sales_cost=assumptions.sale_cost,
+                floor=assumptions.floor,
+                exposure_at_default=ead,
+                effective_interest_rate=eir,
+                growth_rate=assumptions.growth_rate
+            )
+        elif assumptions.type.upper() == 'INDEXED':
+            return IndexedLossGivenDefault(
+                loss_given_default=assumptions.loss_given_default,
+                index=scenario[assumptions.index]
             )
         else:
             raise ValueError(f'Invalid LGD type: {assumptions.type}')

@@ -17,10 +17,11 @@ class PDAssumptions:
 
 
 class LGDAssumptions:
-    def __init__(self, type:str, loss_given_default:float, collateral_index:str, probability_of_cure:float, loss_given_cure:float, forced_sale_discount:float, sale_cost:float, time_to_sale:int, loss_given_write_off:float, floor:float):
+    def __init__(self, type:str, loss_given_default:float, growth_rate:float, index:str, probability_of_cure:float, loss_given_cure:float, forced_sale_discount:float, sale_cost:float, time_to_sale:int, loss_given_write_off:float, floor:float):
         self.type = type
         self.loss_given_default = loss_given_default
-        self.collateral_index = collateral_index
+        self.growth_rate = growth_rate
+        self.index = index
         self.probability_of_cure = probability_of_cure
         self.loss_given_cure = loss_given_cure
         self.forced_sale_discount = forced_sale_discount
@@ -83,7 +84,8 @@ class Assumptions(dict):
             'pd_time_in_watchlist': int,
             'lgd_type': str,
             'lgd_loss_given_default': float,
-            'lgd_collateral_index': str,
+            'lgd_growth_rate': float,
+            'lgd_index': str,
             'lgd_probability_of_cure': float,
             'lgd_loss_given_cure': float,
             'lgd_forced_sale_discount': float,
@@ -166,7 +168,8 @@ class Assumptions(dict):
                 lgd=LGDAssumptions(
                     type = d['lgd_type'],
                     loss_given_default = d['lgd_loss_given_default'],
-                    collateral_index = d['lgd_collateral_index'],
+                    growth_rate = d['lgd_growth_rate'],
+                    index = d['lgd_index'],
                     probability_of_cure = d['lgd_probability_of_cure'],
                     loss_given_cure = d['lgd_loss_given_cure'],
                     forced_sale_discount = d['lgd_forced_sale_discount'],
