@@ -29,7 +29,7 @@ from .file_reader import write_file
 
 __author__ = "Geyer Bisschoff"
 __copyright__ = "Geyer Bisschoff"
-__license__ = "mit"
+__license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
 
@@ -51,8 +51,17 @@ def setup_logging(loglevel):
 
 
 @app.command()
-def version():
-    return __version__
+def about():
+    return print(
+    f"""
+    Z-Model
+    =======================
+    Version: {__version__}
+    Author: {__author__}
+    License: {__license__}
+    Copyright: {__copyright__}
+    """
+    )
 
 
 @app.command()
@@ -69,7 +78,7 @@ def run(
     '''
     Run the Z-model on specified inputs.
 
-    Argumennts:
+    Arguments:
 
     account_data (Path): path to the account level data file.
     The file should be one of the supported file types.
