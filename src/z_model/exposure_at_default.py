@@ -37,7 +37,7 @@ class AmortisingExposureAtDefault:
         balance_t = balance / df_t0 - cum_cf_t
         # Fees are charged before payment is deducted
         fees_pct_amt = cumsum((balance_t + pmt) * self.fees_pct * df_t0)/df_t0
-        balance_t_pfees = balance_t + fees_pct_amt
+        balance_t_pfees = maximum(balance_t + fees_pct_amt,0)
 
         arrears_allowance = account.contractual_payment * 3
         remaining_allowance = max(arrears_allowance - account.current_arrears, 0)
