@@ -1,4 +1,4 @@
-from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum
+from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum, ceil
 from pandas import Series
 from .account import Account
 from .effective_interest_rate import EffectiveInterestRate
@@ -41,7 +41,7 @@ class AmortisingExposureAtDefault:
 
         arrears_allowance = account.contractual_payment * 3
         remaining_allowance = max(arrears_allowance - account.current_arrears, 0)
-        remaining_allowance_t = remaining_allowance / account.contractual_payment
+        remaining_allowance_t = ceil(remaining_allowance / account.contractual_payment)
 
         arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
         arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
