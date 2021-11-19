@@ -25,12 +25,17 @@ class SecuredLossGivenDefault:
         ci = self.index.shift(-self.time_to_sale)[account.remaining_life_index] / self.index[account.reporting_date]
         df = (1 + eir) ** -self.time_to_sale
 
-        lgd = maximum(
-            self.probability_of_cure * self.loss_given_cure +
-            (1 - self.probability_of_cure) * (
-                maximum(account.outstanding_balance * ead - account.collateral_value * ci * (1 - self.forced_sale_discount - self.sales_cost) * df, 0) / (account.outstanding_balance * ead)
-            ),
-            self.floor
+        lgd = (
+            self.probability_of_cure *
+            self.loss_given_cure +
+            (1 - self.probability_of_cure) *
+            maximum(
+                (
+                    account.outstanding_balance * ead
+                    - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
+                ) / (account.outstanding_balance * ead)
+                ,self.floor
+            )
         )
         return Series(
             lgd,
@@ -83,14 +88,17 @@ class ConstantGrowthLossGivenDefault:
         ci = (1 + self.growth_rate) ** ((self.time_to_sale + arange(account.remaining_life)) / 12)
         df = (1 + eir) ** -self.time_to_sale
 
-        lgd = maximum(
-            self.probability_of_cure * self.loss_given_cure +
-            (1 - self.probability_of_cure) * (
-                    maximum(account.outstanding_balance * ead - account.collateral_value * ci * (
-                                1 - self.forced_sale_discount - self.sales_cost) * df, 0) / (
-                                account.outstanding_balance * ead)
-            ),
-            self.floor
+        lgd = (
+            self.probability_of_cure *
+            self.loss_given_cure +
+            (1 - self.probability_of_cure) *
+            maximum(
+                (
+                    account.outstanding_balance * ead
+                    - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
+                ) / (account.outstanding_balance * ead)
+                ,self.floor
+            )
         )
         return Series(
             lgd,
