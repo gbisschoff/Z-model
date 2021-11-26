@@ -23,6 +23,8 @@ class ECLModel:
         df_t = cumprod(1 + eir) / (1 + eir[0])
         df_t0 = 1 / cumprod(1 + eir)
         pd = self.probability_of_default[account]
+        cpd_12m = pd[::-1].cumsum()[::-1]
+        pd_12m = cpd_12m - cpd_12m.shift(-12).fillna(0)
         ead = self.exposure_at_default[account]
         lgd = self.loss_given_default[account]
         stage_p = self.stage_probability[account]
@@ -52,6 +54,7 @@ class ECLModel:
             'T': range(account.remaining_life),
             'forecast_reporting_date': account.remaining_life_index,
             'PD(t)': pd,
+            '12mPD(t)': pd_12m,
             'EAD(t)': ead,
             'LGD(t)': lgd,
             'DF(t)': df_t0,
