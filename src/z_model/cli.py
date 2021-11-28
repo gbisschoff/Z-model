@@ -71,6 +71,7 @@ def run(
         scenarios: Path,
         outfile: Path,
         detailed_output: Optional[Path] = None,
+        parameter_output: Optional[Path] = None,
         monte_carlo: Optional[Path] = None,
         method: Methods = Methods.Map,
         verbose: bool = False
@@ -96,6 +97,9 @@ def run(
     detailed_output (Path): a path where the detailed forecasted results should be exported too.
     This creates a very large file containing the parameters and marginal ECLs for each forecast horizon.
     It is mainly used for debugging purposes. It is recommended to use a compressed CSV file (.csv.gz)
+
+    parameter_output (Path): a path where the parameters should be exported too.
+    It is recommended to use a compressed CSV file (.csv.gz)
 
     monte_carlo (Path): a flag specifying that the SCENARIOS inputs are monte-carlo assumptions and not discrete
     scenarios. A path should be provided where the generated scenarios are saved. Depending on the number of scenarios
@@ -143,10 +147,18 @@ def run(
 
     _logger.info(f'Exporting summarised results ({outfile=}).')
     write_file(
-        results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario', 'Stage']).reset_index(),
+        results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario']),
         outfile,
         index=False
     )
+
+    if parameter_output:
+        _logger.info(f'Exporting parameters ({parameter_output=}).')
+        write_file(
+            results.parameters(by=['segment_id', 'forecast_reporting_date', 'scenario']),
+            parameter_output,
+            index=False
+        )
 
     _logger.info("Done.")
 

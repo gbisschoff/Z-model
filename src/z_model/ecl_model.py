@@ -36,18 +36,15 @@ class ECLModel:
         stage_1_ecl_t0 = stage_2_ecl_t0 - stage_2_ecl_t0.shift(-12).fillna(0)
         stage_1_ecl = stage_1_ecl_t0 * df_t
 
-        coverage_ratio = (
-                (
+        exposure = account.outstanding_balance * ead * (stage_p[1]+stage_p[2]+stage_p[3])
+        ecl = account.outstanding_balance * ead * (
                     stage_p[1] * stage_1_ecl +
                     stage_p[2] * stage_2_ecl +
                     stage_p[3] * stage_3_ecl
-                ) /
-                (1 - stage_p['wo'])
-        )
+                )
 
-        exposure = account.outstanding_balance * ead * (stage_p[1]+stage_p[2]+stage_p[3])
+        coverage_ratio = ecl / exposure
         write_off = account.outstanding_balance * ead * stage_p['wo']
-        ecl = exposure * coverage_ratio
 
         result = DataFrame({
             'contract_id': account.contract_id,
