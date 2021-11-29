@@ -1,8 +1,8 @@
 from scipy.stats import norm as normal
 from functools import reduce
 from scipy.linalg import fractional_matrix_power
-from numpy import array, sum, abs, cumsum, newaxis, diff, expand_dims, append, identity, stack, add, tile, flip, subtract, inf
-from pandas import Series, DatetimeIndex
+from numpy import array, sum, abs, cumsum, newaxis, diff, expand_dims, append, identity, stack, add, tile, flip, subtract, inf, dot
+from pandas import Series, DatetimeIndex, DataFrame
 from dateutil.relativedelta import relativedelta
 
 class TransitionMatrix:
@@ -49,6 +49,11 @@ class TransitionMatrix:
             return reduce(lambda a, x: a + [a[-1] @ x] if a else [x], l, [])
         else:
             return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
+
+    def get_m_step_probabilities(self, to_state: int, m: int = 12):
+        tmv = stack(self)
+        stmv = array([reduce(dot, tmv[i:i + m]) for i in range(len(tmv) - m)])
+        return DataFrame(stmv[:, :, to_state], index=self.index[:-m])
 
     @classmethod
     def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, default_state:int=-1, freq: int = 12, calibrated:bool = True, method:str = 'METHOD-1', **kwargs):
