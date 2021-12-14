@@ -9,14 +9,17 @@ class FixedEffectiveInterestRate:
         pass
 
     def __getitem__(self, account: Account):
-        return Series(repeat((1 + account.fixed_rate) ** (1 / account.interest_rate_freq) - 1,  account.remaining_life), index=account.remaining_life_index)
+        return Series(repeat((1 + account.fixed_rate/account.interest_rate_freq) ** (account.interest_rate_freq / 12) - 1,  account.remaining_life), index=account.remaining_life_index)
 
 class FloatEffectiveInterestRate:
     def __init__(self, base_rate: array, **kwargs):
         self.base_rate = base_rate
 
     def __getitem__(self, account: Account):
-        return (1 + account.spread + self.base_rate[account.remaining_life_index]) ** (1 /  account.interest_rate_freq) - 1
+        return (
+            (1 + account.spread / account.interest_rate_freq) ** (account.interest_rate_freq / 12) *
+            (1 + self.base_rate[account.remaining_life_index]) ** (1 / 12)
+        ) - 1
 
 class EffectiveInterestRate:
     def __init__(self, fixed_eir: FixedEffectiveInterestRate, float_eir: FloatEffectiveInterestRate):
