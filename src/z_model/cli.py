@@ -1,31 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-This is a CLI that can serve as a starting point for the Z-model.
-To run this script uncomment the following lines in the
-[options.entry_points] section in setup.cfg:
+This is a CLI that can serve as a user friendly entry point for the Z-model.
 
-    console_scripts =
-         z_model = z_model.skeleton:run
+The API makes three enpoints available to the user:
 
-Then run `python setup.py install` which will install the command `z_model`
-inside your current environment.
-Besides console scripts, the header (i.e. until _logger...) of this file can
-also be used as template for Python modules.
+* about: to print information about the current version of the Z-model;
+* generate_scenarios: used to generate macroeconomic scenarios from monte-carlo assumptions; and
+* run: used to run the Z-model on an account dataset and produce ECL results.
+
 """
 
 import typer
 from typing import Optional
 import sys
 import logging
-from enum import Enum
 from pathlib import Path
 
 from z_model import __version__
 from z_model.assumptions import Assumptions
 from z_model.scenarios import Scenarios
-from z_model.account_data import AccountData
+from z_model.account import AccountData
 from z_model.exeutor import Executor
 from .file_reader import write_file
+from .exeutor import Methods
 
 __author__ = "Geyer Bisschoff"
 __copyright__ = "Geyer Bisschoff"
@@ -35,16 +32,11 @@ _logger = logging.getLogger(__name__)
 
 app = typer.Typer()
 
-class Methods(str, Enum):
-    Map = 'map'
-    ProgressMap = 'process_map'
-    ThreadMap = 'thread_map'
 
-def setup_logging(loglevel):
+def setup_logging(loglevel:int):
     """Setup basic logging
 
-    Args:
-      loglevel (int): minimum loglevel for emitting messages
+    :param loglevel: minimum loglevel for emitting messages
     """
     logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
     logging.basicConfig(level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S")
@@ -52,6 +44,9 @@ def setup_logging(loglevel):
 
 @app.command()
 def about():
+    '''
+    Print Z-model about information.
+    '''
     return print(
     f"""
     Z-Model
@@ -65,6 +60,32 @@ def about():
 
 
 @app.command()
+def generate_scenarios(
+    assumptions: Path,
+    outfile: Path,
+    verbose: bool = False
+):
+    '''
+    Generate macroeconomic scenarios using Monte Carlo
+
+    :param assumptions: the path to the MONTE_CARLO_ASSUMPTIONS.xlsx file.
+    :param outfile: the path to save the generated scenarios. Recommeded to be a .csv.gz file type.
+
+    '''
+    setup_logging(logging.INFO if not verbose else logging.DEBUG)
+    _logger.info(f'Debugging level set to {logging.INFO if not verbose else logging.DEBUG}')
+
+    _logger.info(f'Generating scenarios from monte-carlo assumptions ({assumptions=}).')
+    scenarios = Scenarios.from_assumptions(url=assumptions)
+    _logger.info(f'Saving monte-carlo scenarios ({outfile=}).')
+    write_file(
+        df=scenarios.as_dataframe(),
+        url=outfile
+    )
+    _logger.info("Done.")
+
+
+@app.command()
 def run(
         account_data: Path,
         assumptions: Path,
@@ -72,64 +93,56 @@ def run(
         outfile: Path,
         detailed_output: Optional[Path] = None,
         parameter_output: Optional[Path] = None,
-        monte_carlo: Optional[Path] = None,
         method: Methods = Methods.Map,
         verbose: bool = False
 ):
     '''
     Run the Z-model on specified inputs.
 
-    Arguments:
+    :param account_data: path to the account level data file.
+        The file should be one of the supported file types.
 
-    account_data (Path): path to the account level data file.
-    The file should be one of the supported file types.
+    :param assumptions: path to the assumptions file.
+        The file should be in .XLSX format.
 
-    assumptions (Path): path to the assumptions file.
-    The file should be in .XLSX format.
+    :param scenarios: the path to the macroeconomic scenarios.
+        The file should be in .XLSX, .CSV or .CSV.GZ format.
 
-    scenarios (Path): the path to the macroeconomic scenarios or monte-carlo assumptions.
-    The file should be in .XLSX format. If monte-carlo assumptions are provided the --monte-carlo option should be
-    used.
+    :param outfile: the path to the output file. Any standard Python Pandas file extension is supported.
+        However, it is recommended to use a compressed CSV file (.csv.gz).
 
-    outfile (Path): the path to the output file. Any standard Python Pandas file extension is supported.
-    However, it is recommended to use a compressed CSV file (.csv.gz).
+    :param detailed_output: a path where the detailed forecasted results should be exported too.
+        This creates a very large file containing the parameters and marginal ECLs for each forecast horizon.
+        It is mainly used for debugging purposes. It is recommended to use a compressed CSV file (.csv.gz)
 
-    detailed_output (Path): a path where the detailed forecasted results should be exported too.
-    This creates a very large file containing the parameters and marginal ECLs for each forecast horizon.
-    It is mainly used for debugging purposes. It is recommended to use a compressed CSV file (.csv.gz)
+    :param parameter_output: a path where the parameters should be exported too.
+        It is recommended to use a compressed CSV file (.csv.gz)
 
-    parameter_output (Path): a path where the parameters should be exported too.
-    It is recommended to use a compressed CSV file (.csv.gz)
+    :param monte_carlo: a flag specifying that the SCENARIOS inputs are monte-carlo assumptions and not discrete
+        scenarios. A path should be provided where the generated scenarios are saved. Depending on the number of scenarios
+        generated the file might become large. It is recommended to use a compressed CSV file (.csv.gz)
 
-    monte_carlo (Path): a flag specifying that the SCENARIOS inputs are monte-carlo assumptions and not discrete
-    scenarios. A path should be provided where the generated scenarios are saved. Depending on the number of scenarios
-    generated the file might become large. It is recommended to use a compressed CSV file (.csv.gz)
+    :param method: one of either 'map', 'process_map' or 'thread_map'. Depending on the selection the
+        execution engine changes.
 
-    method (Methods): one of either 'map', 'process_map' or 'thread_map'. Depending on the selection the
-    execution engine changes.
+            map: map executes the all scenarios in series and might take longer to run.
 
-        map: map executes the all scenarios in series and might take longer to run.
+            process_map: executes the scenarios in parallel, but not all computers support parallel processing.
 
-        process_map: executes the scenarios in parallel, but not all computers support parallel processing.
+            thread_map: executes the scenarios in a threaded manner, but not all computers support parallel
+            processing.
 
-        thread_map: executes the scenarios in a threaded manner, but not all computers support parallel
-        processing.
+    :param verbose: a flag spefifying if debugging should be enabled.
 
-    verbose (bool): a flag spefifying if debugging should be enabled.
     '''
     setup_logging(logging.INFO if not verbose else logging.DEBUG)
     _logger.info(f'Debugging level set to {logging.INFO if not verbose else logging.DEBUG}')
 
     _logger.info(f'Loading assumptions ({assumptions=}).')
     assumptions = Assumptions.from_file(url=assumptions)
-    if monte_carlo:
-        _logger.info(f'Generating scenarios from monte-carlo assumptions ({scenarios=}).')
-        scenarios = Scenarios.from_assumptions(url=scenarios)
-        _logger.info(f'Saving monte-carlo scenarios ({monte_carlo=}).')
-        scenarios.as_dataframe().to_csv(monte_carlo)
-    else:
-        _logger.info(f'Loading discrete scenarios ({scenarios=}).')
-        scenarios = Scenarios.from_file(url=scenarios)
+
+    _logger.info(f'Loading macroeconomic scenarios ({scenarios=}).')
+    scenarios = Scenarios.from_file(url=scenarios)
 
     _logger.info(f'Loading account level data ({account_data=}).')
     account_data = AccountData.from_file(url=account_data)

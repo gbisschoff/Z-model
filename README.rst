@@ -12,9 +12,9 @@ Z-model
 
 The expected credit loss (ECL) is calculated using a marginal loss framework as follows:
 
-.. image:: ./img/ECL-formula.png
-    :align: center
-    :alt: ECL Formula
+.. math::
+    ECL(T) = \sum_{t=0}^{lifetime} \sum_{r \not= D} P[R_t=r | R_0 = C] \times P[R_{t+1}=D | R_t=r] \times EAD(t) \times LGD(t)
+
 
 The transition probabilities in the above formula are calculated using the
 `Z risk engine <https://www.z-riskengine.com/media/1032/a-one-parameter-representation-of-credit-risk-and-transition-matrices.pdf>`_

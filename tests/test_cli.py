@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from z_model.cli import run, Methods
+from z_model.cli import run, Methods, generate_scenarios, about
 
 
 def test_cli(tmp_path):
@@ -9,18 +9,24 @@ def test_cli(tmp_path):
     d = tmp_path / "data"
     d.mkdir()
 
+    about()
+
+    generate_scenarios(
+        assumptions=Path('./data/MONTE_CARLO_ASSUMPTIONS.xlsx'),
+        outfile=Path(d / 'out-scenarios.csv.gz')
+    )
+    assert Path(d / 'out-scenarios.csv.gz').exists()
+
     run(
         account_data=Path('./data/account_level_data.xlsx'),
         assumptions=Path('./data/ASSUMPTIONS.xlsx'),
-        scenarios=Path('./data/MONTE_CARLO_ASSUMPTIONS.xlsx'),
+        scenarios=Path('./data/SCENARIOS.xlsx'),
         outfile=Path(d / 'out.csv.gz'),
         detailed_output=Path(d / 'out-detailed.csv.gz'),
         parameter_output=Path(d / 'out-parameters.csv.gz'),
-        monte_carlo=Path(d / 'out-scenarios.csv.gz'),
         method=Methods.ProgressMap,
         verbose=True
     )
     assert Path(d / 'out.csv.gz').exists()
     assert Path(d / 'out-detailed.csv.gz').exists()
-    assert Path(d / 'out-scenarios.csv.gz').exists()
     assert Path(d / 'out-parameters.csv.gz').exists()

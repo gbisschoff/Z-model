@@ -1,3 +1,14 @@
+'''
+Exposure at Default (EAD)
+
+This module contains the different EAD models available.
+
+:class:`ExposureAtDefault` is a common entry point to configure the different EAD models and return the segment specfic
+EAD model based on the segment assumptions.
+
+Each EAD model exposes a common API to calculate the account specific EAD vector.
+
+'''
 from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum, ceil
 from pandas import Series
 from .account import Account
@@ -57,17 +68,17 @@ class CCFExposureAtDefault:
         self.ccf = ccf
 
     def __getitem__(self, account: Account):
-        if self.ccf_method.upper() == 'METHOD 1':
+        if self.ccf_method.upper() == 'METHOD-1':
             return Series(
-                self.ccf, account.remaining_life,
+                self.ccf,
                 index=account.remaining_life_index
             )
-        elif self.ccf_method.upper() == 'METHOD 2':
+        elif self.ccf_method.upper() == 'METHOD-2':
             return Series(
                 account.limit * self.ccf / account.outstanding_balance,
                 index=account.remaining_life_index
             )
-        elif self.ccf_method.upper() == 'METHOD 3':
+        elif self.ccf_method.upper() == 'METHOD-3':
             return Series(
                 (account.outstanding_balance + (account.limit - account.outstanding_balance) * self.ccf) /
                 account.outstanding_balance,

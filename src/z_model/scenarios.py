@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import seaborn as sns
 from .series import Series
-
+from .file_reader import read_file
 
 class Scenario:
     """
@@ -82,15 +82,13 @@ class Scenarios:
                     ...
                 }
         """
-        data = read_excel(
-            io=url,
-            sheet_name='DATA',
+        data = read_file(
+            url=url,
             dtype={
-                'SCENARIO': str,
-                'DATE': datetime
+                'SCENARIO': str
             },
             index_col='DATE',
-            engine='openpyxl'
+            parse_dates=True
         )
         return cls.from_dataframe(data)
 
@@ -120,8 +118,8 @@ class Scenarios:
         FUN = {
             'EXPONENTIAL': exp
         }
-        assumptions = read_excel(
-            io=url,
+        assumptions = read_file(
+            url=url,
             sheet_name='DATA',
             dtype={
                 'NAME': str,

@@ -21,8 +21,8 @@ Steps to run the model:
 from pathlib import Path
 from z_model.assumptions import Assumptions
 from z_model.scenarios import Scenarios
-from z_model.account_data import AccountData
-from z_model.exeutor import Executor
+from z_model.account import AccountData
+from z_model.exeutor import Executor, Methods
 
 if __name__ == '__main__':
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     scenarios = Scenarios.from_file(url=Path('./data/SCENARIOS.xlsx'))
     account_data = AccountData.from_file(url=Path('./data/account_level_data.xlsx'))
 
-    results = Executor(method='process_map').execute(
+    results = Executor(method=Methods.ProgressMap).execute(
         account_data=account_data,
         assumptions=assumptions,
         scenarios=scenarios

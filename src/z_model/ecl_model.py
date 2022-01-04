@@ -6,11 +6,40 @@ from .loss_given_default import LossGivenDefault
 from .stage_probability import StageProbability
 from .probability_of_default import ProbabilityOfDefault
 from .exposure_at_default import ExposureAtDefault
-from .account import Account
+from .account import Account, AccountData
 from .assumptions import SegmentAssumptions
 from .scenarios import Scenario
 
 class ECLModel:
+    r'''
+    ECL Model
+
+    This class contains the logic to configure the ECL model as well as calculate the ECL for a given :class:`Account`.
+
+    The discounted marginal ECL at time ``t`` is calculated as:
+
+    .. math::
+        ECL(t) = PD(t) \times EAD(t) \times LGD(t) \times df(t)
+
+    From the marginal ECLs the stage conditional ECLs at time ``T`` are calculated as follows:
+
+    .. math::
+        ECL(T | S \in {1, 2}) = \sum_{t=T}^{L} ECL(t) / df(T)
+
+        L = \cases {
+            min(12, remaining life) & \text{if $S = 1$} \cr
+            remaining life & \text{if $S = 2$}
+        }
+
+        ECL(T | S=3) = LGD(t)
+
+    Afterwhich, the expected ECL at time T is calculated as the probability weighted average of the stage
+    conditional ECLs:
+
+    .. math::
+        ECL(T) = \sum_{s \in S} ECL(T | S=s) \times P[S_T = s]
+
+    '''
     def __init__(self, stage_probability: StageProbability, exposure_at_default: ExposureAtDefault, probability_of_default: ProbabilityOfDefault, loss_given_default: LossGivenDefault, effective_interest_rate: EffectiveInterestRate, *args, **kwargs):
         self.stage_probability = stage_probability
         self.exposure_at_default = exposure_at_default
@@ -19,6 +48,14 @@ class ECLModel:
         self.effective_interest_rate = effective_interest_rate
 
     def __getitem__(self, account: Account):
+        '''
+        Calculate the account level ECL forecast.
+
+        :param account: an :class:`Account` object.
+
+        :returns: :class:`DataFrame` with the account level ECL forecast.
+
+        '''
         eir = self.effective_interest_rate[account]
         df_t = cumprod(1 + eir) / (1 + eir[0])
         df_t0 = 1 / cumprod(1 + eir)
@@ -73,6 +110,13 @@ class ECLModel:
 
     @classmethod
     def from_assumptions(cls, segment_assumptions: SegmentAssumptions, scenario: Scenario):
+        '''
+        Configure the ECL model .
+
+        :param segment_assumptions: object of type :class:`SegmentAssumptions`
+        :param scenario: object of type :class:`Scenario`
+
+        '''
         tm = TransitionMatrix.from_assumption(
             ttc_transition_matrix=segment_assumptions.pd.transition_matrix,
             rho=segment_assumptions.pd.rho,

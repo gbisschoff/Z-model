@@ -1,26 +1,58 @@
 from pandas import concat, merge
 from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import thread_map, process_map
-from .account import Account
+from enum import Enum
+from .account import Account, AccountData
 from .assumptions import Assumptions
 from .scenarios import Scenarios
-from .account_data import AccountData
 from .results import Results
 from .ecl_model import ECLModel
 
+class Methods(str, Enum):
+    '''
+    Methods
+
+    Specifies different execution methods:
+
+    * ``MAP``: One scenario at a time. This takes the longest to run, but is typically the most robust. This method
+        has to be used if the model is executed in an interactive session.
+    * ``THREAD_MAP``: Each scenario is exectued in its own thread. It only provides an increase in performance for IO
+        bound operations.
+    * ``PROCESS_MAP``: Each scenario is executed in paralelle in its own worker. This provide true paralelle processing.
+        This only works in non-interactive sessions, i.e. via the terminal.
+
+    '''
+    Map = 'map'
+    ProgressMap = 'process_map'
+    ThreadMap = 'thread_map'
+
+    def executor(self, *args, **kwargs):
+        return {
+            Methods.Map: lambda fn, x, **k: list(map(fn, tqdm(x, **k))),
+            Methods.ThreadMap: thread_map,
+            Methods.ProgressMap: process_map,
+        }.get(self)(*args, **kwargs)
+
 
 class Executor:
-    METHODS = {
-        'MAP': lambda fn, x, **k: list(map(fn, tqdm(x, **k))),
-        'THREAD_MAP': thread_map,
-        'PROCESS_MAP': process_map,
-    }
+    '''
+    Executor
 
-    def __init__(self, method: str):
-        self.method = method.upper()
+    A class used to setup and execute multiple economic scenarios. Uses :class:`Methods` to specify the execution
+    method.
+
+    '''
+
+    def __init__(self, method: Methods = Methods.Map):
+        self.method = method
 
     @staticmethod
     def _run_scenario(args):
+        '''
+        Execute a single macroeconomic scenario
+
+        :param args: Tuple(name, scenario, assumptions, account_data)
+        '''
         name, scenario, assumptions, account_data = args
         ecl_models = {
             segment_id: ECLModel.from_assumptions(
@@ -42,14 +74,12 @@ class Executor:
         """
         Execute the Z-model on the account level data.
 
-        Args:
-            account_data: and `AccountData` object.
-            assumptions: an :obj:`Assumptions` object containing the model assumptions for each segment.
-            scenarios: an "obj:`Scenarios` object containing the economic scenarios to run.
+        :param account_data: and :class:`AccountData` object.
+        :param assumptions: an :class:`Assumptions` object containing the model assumptions for each segment.
+        :param scenarios: an :class:`Scenarios` object containing the economic scenarios to run.
 
-        Returns:
-             A :obj:`Results` with the account level ECL and ST results for each month until maturity.
+        :return:  A :class:`Results` with the account level ECL and ST results for each month until maturity.
         """
         args = [(n, s, assumptions, account_data) for n, s in scenarios.items()]
-        r = self.METHODS.get(self.method)(self._run_scenario, args, desc='Scenarios', position=0)
+        r = self.method.executor(self._run_scenario, args, desc='Scenarios', position=0)
         return Results(merge(account_data.data, concat(r).reset_index(), how='left', on='contract_id'))

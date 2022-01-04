@@ -1,3 +1,9 @@
+'''
+File Readers and Writers
+
+Create a common API to read multiple file types
+
+'''
 import pandas as pd
 from pathlib import Path
 
@@ -31,13 +37,41 @@ __WRITERS__ = {
 }
 
 def guess_extension(url: Path):
+    '''
+    Guess Extension
+
+    Determine the file extension based on the url.
+
+    :param url: the path to the file.
+    '''
     return ''.join(url.suffixes).lower()
 
 
 def read_file(url: Path, *args, **kwargs):
+    '''
+    Read File
+
+    Read a file based on the file extension.
+
+    :param url: the path to the file.
+    :param args: addtional arguments passed to the reader.
+    :param kwargs: additional key word arguments passed to teh reader.
+
+    '''
     return __READERS__.get(guess_extension(url), pd.read_table)(url, *args, **kwargs)
 
 
 def write_file(df: pd.DataFrame, url: Path, *args, **kwargs):
+    '''
+    Write File
+
+    Write a file based on the file extension.
+
+    :param df: a pandas dataframe.
+    :param url: the path to the file.
+    :param args: addtional arguments passed to the writer.
+    :param kwargs: additional key word arguments passed to teh writer.
+
+    '''
     getattr(df, __WRITERS__.get(guess_extension(url), 'to_csv'))(url, *args, **kwargs)
 
