@@ -91,8 +91,6 @@ def run(
         assumptions: Path,
         scenarios: Path,
         outfile: Path,
-        detailed_output: Optional[Path] = None,
-        parameter_output: Optional[Path] = None,
         method: Methods = Methods.Map,
         verbose: bool = False
 ):
@@ -108,15 +106,8 @@ def run(
     :param scenarios: the path to the macroeconomic scenarios.
         The file should be in .XLSX, .CSV or .CSV.GZ format.
 
-    :param outfile: the path to the output file. Any standard Python Pandas file extension is supported.
-        However, it is recommended to use a compressed CSV file (.csv.gz).
-
-    :param detailed_output: a path where the detailed forecasted results should be exported too.
-        This creates a very large file containing the parameters and marginal ECLs for each forecast horizon.
-        It is mainly used for debugging purposes. It is recommended to use a compressed CSV file (.csv.gz)
-
-    :param parameter_output: a path where the parameters should be exported too.
-        It is recommended to use a compressed CSV file (.csv.gz)
+    :param outfile: the path to the output file. Results are stored in a zip archive and thus should have the
+        a `.zip` extension.
 
     :param monte_carlo: a flag specifying that the SCENARIOS inputs are monte-carlo assumptions and not discrete
         scenarios. A path should be provided where the generated scenarios are saved. Depending on the number of scenarios
@@ -154,24 +145,8 @@ def run(
         scenarios=scenarios
     )
 
-    if detailed_output:
-        _logger.info(f'Exporting detailed results ({detailed_output=}).')
-        write_file(results.data.reset_index(), detailed_output, index=False)
-
-    _logger.info(f'Exporting summarised results ({outfile=}).')
-    write_file(
-        results.summarise(by=['segment_id', 'forecast_reporting_date', 'scenario']),
-        outfile,
-        index=False
-    )
-
-    if parameter_output:
-        _logger.info(f'Exporting parameters ({parameter_output=}).')
-        write_file(
-            results.parameters(by=['segment_id', 'forecast_reporting_date', 'scenario']),
-            parameter_output,
-            index=False
-        )
+    _logger.info(f'Saving results ({outfile=}).')
+    results.save(outfile)
 
     _logger.info("Done.")
 

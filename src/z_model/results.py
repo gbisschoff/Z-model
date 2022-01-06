@@ -1,12 +1,29 @@
+from pathlib import Path
+from zipfile import ZipFile, ZIP_DEFLATED
 from pandas import DataFrame
 from numpy import sum
-
+from .file_reader import guess_extension
 
 class Results:
+    '''
+    Z-Model Results class
+
+    The :class:`Executor` resturns a :class:`Results` object that contains the detailed ECL results and itermediate
+    parameters at an account level. The :class:`Results` object also has the ability to summarise the results and
+    parameters. Finally, it is possible to save all three reports into a compressed Zip archive for storage and use
+    in other programs.
+
+    '''
     def __init__(self, data: DataFrame):
         self.data = data
 
-    def summarise(self, by=['segment_id', 'scenario', 'T']):
+    def summarise(self, by=['segment_id', 'scenario', 'forecast_reporting_date']):
+        '''
+        Summarise the ECL results.
+
+        :param by: a list of columns to summarise by. (Default: ``['segment_id', 'scenario', 'forecast_reporting_date']``)
+
+        '''
         df = self.data[[*by, 'outstanding_balance', 'EAD(t)', 'P(S=1)', 'P(S=2)', 'P(S=3)', 'P(S=WO)', 'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)']].copy()
 
         df['Exposure(t)_1'] = df['outstanding_balance'] * df['EAD(t)'] * df['P(S=1)']
@@ -21,8 +38,8 @@ class Results:
 
         rs = (
             df
-                .groupby(by=by)
-                .aggregate(
+            .groupby(by=by)
+            .aggregate(
                 n_1=('P(S=1)', sum),
                 n_2=('P(S=2)', sum),
                 n_3=('P(S=3)', sum),
@@ -36,8 +53,8 @@ class Results:
                 ecl_3=('ECL(t)_3', sum),
                 ecl_wo=('ECL(t)_wo', sum),
             )
-                .reset_index()
-                .melt(id_vars=by)
+            .reset_index()
+            .melt(id_vars=by)
         )
 
         var_split = rs['variable'].str.split('_', n=1, expand=True)
@@ -50,7 +67,13 @@ class Results:
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'ecl': 'ECL(t)', 'cr': 'CR(t)'}, inplace=True)
         return rs[[*by, '#', 'Exposure(t)', 'ECL(t)', 'CR(t)']]
 
-    def parameters(self, by=['segment_id', 'scenario', 'T']):
+    def parameters(self, by=['segment_id', 'scenario', 'forecast_reporting_date']):
+        '''
+        Summarise the parameters.
+
+        :param by: a list of columns to summarise by. (Default: ``['segment_id', 'scenario', 'forecast_reporting_date']``)
+
+        '''
         df = self.data[[*by, 'P(S=1)', 'P(S=2)', 'P(S=3)', 'Exposure(t)', '12mPD(t)', 'LGD(t)']].copy()
         df['N'] = (df['P(S=1)'] + df['P(S=2)'] + df['P(S=3)'])
         df['EPD'] = df['Exposure(t)'] * df['12mPD(t)']
@@ -72,4 +95,23 @@ class Results:
 
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'epd': '12mPD(t)', 'elgd': 'LGD(t)'}, inplace=True)
         return rs[[*by, '#', 'Exposure(t)', '12mPD(t)', 'LGD(t)']]
+
+    def save(self, url: Path):
+        '''
+        Save the results and reports to a zip archive.
+
+        :param url: the path to a Zip archive.
+
+        '''
+        if guess_extension(url) != '.zip':
+            raise ValueError(f'The file path {url} is not a .zip file.')
+
+        with ZipFile(url, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
+            with zf.open(f"detailed-result.csv", "w") as buffer:
+                self.data.to_csv(buffer, index=False)
+            with zf.open(f"summary.csv", "w") as buffer:
+                self.summarise().to_csv(buffer, index=False)
+            with zf.open(f"parameters.csv", "w") as buffer:
+                self.parameters().to_csv(buffer, index=False)
+
 
