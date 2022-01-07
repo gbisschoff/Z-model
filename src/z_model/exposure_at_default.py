@@ -8,6 +8,11 @@ EAD model based on the segment assumptions.
 
 Each EAD model exposes a common API to calculate the account specific EAD vector.
 
+The ``Exposure`` of an account is calculated as;
+
+.. math::
+    Exposure(t) = OutstandingBalance_(t0) \times EAD(t)
+
 '''
 from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum, ceil
 from pandas import Series
@@ -17,6 +22,15 @@ from .assumptions import EADAssumptions
 from .scenarios import Scenario
 
 class ConstantExposureAtDefault:
+    '''
+    Constant EAD
+
+    Set the EAD to a constant value over time, i.e.:
+
+    .. math::
+       EAD(t) = ExposureAtDefault
+
+    '''
     def __init__(self, exposure_at_default: float):
         self.exposure_at_default = exposure_at_default
 
@@ -25,6 +39,25 @@ class ConstantExposureAtDefault:
 
 
 class AmortisingExposureAtDefault:
+    '''
+    Amortising EAD
+
+    Calculate the EAD using an amortisation table. This is done using the following set of equations:
+
+    .. math::
+        EAD(t) = max( (balance(t) + arrears(t) ) / OutstandingBalance, 0)
+        balance(t) = max( OutstandingBalance / df(t) + ( CumulativeFees(t) - CumulativeCashflows(t) ), 0)
+        CumulativeCashflows(t) = \sum_(i=0)^t (ContractualPayment \times I(IsPaymentPeriod(i)) \times (1 + PrepaymentPct) - FixedFees) \times df(i) / df(t)
+        CumulativeFees(t) = \sum_(i=0)^t (( balance(i) + ContractualPayment \times I(IsPaymentPeriod(i)) ) \times FeesPct \times df(i)) / df(t)
+        arrears(t) = min( CumulativeArrears(t) / df(t), RemainingAllowance)
+        CumulativeArrears(t) = \sum_(i=0)^t ContractualPayment * I(NPayments(i) <= RemainingAllowanceT) * I(IsPaymentPeriod(i)) * df(i)
+        NPayments(t) = \sum_(i=0)^t I(IsPaymentPeriod(i))
+        RemainingAllowanceT = ceil(RemainingAllowance / ContractualPayment)
+        RemainingAllowance = max( ContractualPayment * 3 - CurrentArrears, 0)
+        I(IsPaymentPeriod(t)) = (RemainingLife - t) % (12 / ContractualFreq) == 0
+
+
+    '''
     def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, **kwargs):
         self.effective_interest_rate = effective_interest_rate
         self.fixed_fees = fixed_fees
@@ -63,6 +96,16 @@ class AmortisingExposureAtDefault:
 
 
 class CCFExposureAtDefault:
+    '''
+    Credit Conversion Factor (CCF) EAD
+
+    Calculate EAD using one CCF methods:
+
+    * ``METHOD-1``: EAD(t) = CCF
+    * ``METHOD-2``: EAD(t) = AccountLimit * CCF / OutstandingBalancce
+    * ``METHOD-3``: EAD(t) = OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF
+
+    '''
     def __init__(self, ccf_method: str, ccf: float, **kwargs):
         self.ccf_method = ccf_method.upper()
         self.ccf = ccf
