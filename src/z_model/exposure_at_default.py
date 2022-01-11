@@ -99,11 +99,11 @@ class CCFExposureAtDefault:
     '''
     Credit Conversion Factor (CCF) EAD
 
-    Calculate EAD using one CCF methods:
+    Calculate EAD using one of the CCF methods:
 
     * ``METHOD-1``: EAD(t) = CCF
     * ``METHOD-2``: EAD(t) = AccountLimit * CCF / OutstandingBalancce
-    * ``METHOD-3``: EAD(t) = OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF
+    * ``METHOD-3``: EAD(t) = (OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF) / OutstandingBalancce
 
     '''
     def __init__(self, ccf_method: str, ccf: float, **kwargs):
