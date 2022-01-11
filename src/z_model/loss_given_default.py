@@ -1,3 +1,20 @@
+'''
+Loss Given Default (LGD)
+
+This module contains the different LGD models available. The following types are available:
+
+* :class:`SecuredLossGivenDefault` - Secured LGD where the collateral value is adjusted by the change in the ``index``.
+* :class:`UnsecuredLossGivenDefault` - Unsecured component based LGD.
+* :class:`ConstantLossGivenDefault` - Constant LGD value applied to all accounts over time.
+* :class:`ConstantGrowthLossGivenDefault` - Secured LGD where the collateral value is adjusted by a constant growth rate.
+* :class:`IndexedLossGivenDefault` - A constant LGD that is adjusted by an scaling factor index.
+
+:class:`LossGivenDefault` is a common entry point to configure the different LGD models and return the segment specfic
+LGD model based on the segment assumptions.
+
+Each LGD model exposes a common API to calculate the account specific LGD vector.
+
+'''
 from numpy import repeat, array, maximum, zeros, arange
 from pandas import Series
 from dateutil.relativedelta import relativedelta
@@ -8,6 +25,18 @@ from .exposure_at_default import ExposureAtDefault
 from .assumptions import LGDAssumptions
 
 class SecuredLossGivenDefault:
+    '''
+    Secured LGD
+
+    The secured LGD is calculated as follows:
+
+    .. math::
+        LGD(t) = P[Cure] * LGC + (1 - P[Cure]) * LGP(t)
+        LGP(t) = max( (EAD(t) - CollateralValue * CI(t) * (1-FSD) * (1-SC) * df(TTS)) / EAD(t), Floor )
+        CI(t) = Index(t + TTS) / Index(t=0)
+
+
+    '''
     def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int, forced_sale_discount: float, sales_cost: float, floor: float, exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate, index: array, **kwargs):
         self.probability_of_cure = probability_of_cure
         self.loss_given_cure = loss_given_cure
@@ -44,6 +73,15 @@ class SecuredLossGivenDefault:
 
 
 class UnsecuredLossGivenDefault:
+    '''
+    Unsecured LGD
+
+    The unsecured LGD is calculated as follows:
+
+    .. math::
+        LGD(t) = P[Cure] * LGC + (1 - P[Cure]) * LGWO
+
+    '''
     def __init__(self, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float, **kwargs):
         self.probability_of_cure = probability_of_cure
         self.loss_given_cuve = loss_given_cure
@@ -58,6 +96,15 @@ class UnsecuredLossGivenDefault:
 
 
 class ConstantLossGivenDefault:
+    '''
+    Constant LGD
+
+    The constant LGD is calculated as follows:
+
+    .. math::
+        LGD(t) = LGD
+
+    '''
     def __init__(self, loss_given_default: float, **kwargs):
         self.loss_given_default = loss_given_default
 
@@ -68,6 +115,17 @@ class ConstantLossGivenDefault:
         )
 
 class ConstantGrowthLossGivenDefault:
+    '''
+    Secured LGD
+
+    The secured LGD is calculated as follows:
+
+    .. math::
+        LGD(t) = P[Cure] * LGC + (1 - P[Cure]) * LGP(t)
+        LGP(t) = max( (EAD(t) - CollateralValue * CI(t) * (1-FSD) * (1-SC) * df(TTS)) / EAD(t), Floor )
+        CI(t) = (1 + GrowthRate)^((t + TTS)/12)
+
+    '''
     def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int,
                  forced_sale_discount: float, sales_cost: float, floor: float,
                  exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate,
@@ -107,6 +165,15 @@ class ConstantGrowthLossGivenDefault:
 
 
 class IndexedLossGivenDefault:
+    '''
+    Indexed LGD
+
+    The indexed LGD is calculated as follows:
+
+    .. math::
+        LGD(t) = LGD * Index(t) / Index(t=0)
+
+    '''
     def __init__(self, loss_given_default: float, index:array, **kwargs):
         self.loss_given_default = loss_given_default
         self.index = index
