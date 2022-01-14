@@ -1,9 +1,56 @@
-from pylab import plot, show, xlabel, ylabel, axhline
-from numpy import empty, random, sqrt, linspace
+from numpy import empty, random, sqrt
 
 
 class Series:
-    def __init__(self, T: float, N: int, x0: float = None, dx0=.0, theta=.0, m1=.0, m2=.0, sigma=.0, m=1, fun=lambda x: x):
+    '''
+    The forecast model is of the form:
+
+    .. math::
+        dx = m1 (\theta - x) dt + m2 dx + \sigma dw
+
+    where:
+
+    * ``m1`` is the mean reversion parameter,
+    * ``theta`` is the long run average,
+    * ``m2`` is the momentum parameter,
+    * ``sigma`` is the volatility, and
+    * ``dw`` is a Brownian motion.
+    '''
+    def __init__(self, T: float, N: int, x0: float = None, dx0:float=.0, theta:float=.0, m1:float=.0, m2:float=.0, sigma:float=.0, m:int=1, fun=lambda x: x):
+        '''
+
+        :param NAME: str - The name of the macroeconomic variable that should be generated. It should match
+            (case sensitive) references in other inputs.
+
+        :param START_DATE: datetime - From when should the macroeconomic forecast start. This should correspond to the
+            value of ``x0`` below.
+
+        :param T: float - The number of periods to forcast. Note that if the model was calibrated on quaterly data,
+            this would be the number of quarters to forecast.
+
+        :param N: int - The length of the output vector. If the model was calibrated on quaterly data and the model
+            requires a monthly output vector for the ECL calculations ``N`` would be ``3*T``.
+
+        :param x0: float - The value of the series at the ``START_DATE``.
+
+        :param dx0: float - The value of the first difference at the ``START_DATE``, i.e. x(t=0) - x(t=-1).
+
+        :param theta: float - The Theta parameter in the model. The ``theta`` is the Central Tendency value.
+
+        :param m1: float - The m1 (mean reversion) parameter in the model.
+
+        :param m2: float - The m2 (momentum) parameter in the model.
+
+        :param sigma: float - The models volatility parameter. Set equal to 0 if a deterministic forecast should
+            be created.
+
+        :param m: int - The number of simulations to create.
+
+        :param fun: lambda - A transformation to apply to x after the forecast is created. Only ``EXPONENTIAL`` is
+            supported at the moment and can be used to convert a variable that was modelled in the Log space to
+            the nominal space.
+
+        '''
         self.T = T
         self.N = N
         self.x0 = theta if x0 is None else x0
@@ -30,13 +77,3 @@ class Series:
             x[:, i + 1] = x[:, i] + dx[:, i+1]
 
         return dx, x, self.fun(x)
-
-    def plot(self, item: str = 'fx'):
-        x = self[item]
-        t = linspace(0.0, self.T, self.N + 1)
-        for k in range(self.m):
-            plot(t, x[k])
-        axhline(y=self.fun(self.theta), color='black', ls='--')
-        xlabel('t', fontsize=16)
-        ylabel(item, fontsize=16)
-        show()
