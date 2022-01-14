@@ -107,11 +107,6 @@ class Results:
             raise ValueError(f'The file path {url} is not a .zip file.')
 
         with ZipFile(url, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
-            with zf.open(f"detailed-result.csv", "w") as buffer:
-                self.data.to_csv(buffer, index=False)
-            with zf.open(f"summary.csv", "w") as buffer:
-                self.summarise().to_csv(buffer, index=False)
-            with zf.open(f"parameters.csv", "w") as buffer:
-                self.parameters().to_csv(buffer, index=False)
-
-
+            zf.writestr("detailed-result.csv", self.data.to_csv(index=False))
+            zf.writestr("summary.csv", self.summarise().to_csv(index=False))
+            zf.writestr("parameters.csv", self.parameters().to_csv(index=False))
