@@ -17,7 +17,7 @@ class Results:
     def __init__(self, data: DataFrame):
         self.data = data
 
-    def summarise(self, by=['segment_id', 'scenario', 'forecast_reporting_date']):
+    def summarise(self, by=['segment_id', 'forecast_reporting_date', 'scenario']):
         '''
         Summarise the ECL results.
 
@@ -65,9 +65,9 @@ class Results:
         rs['cr'] = rs['ecl'] / rs['exposure']
 
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'ecl': 'ECL(t)', 'cr': 'CR(t)'}, inplace=True)
-        return rs[[*by, '#', 'Exposure(t)', 'ECL(t)', 'CR(t)']]
+        return rs[[*by, 'stage', '#', 'Exposure(t)', 'ECL(t)', 'CR(t)']]
 
-    def parameters(self, by=['segment_id', 'scenario', 'forecast_reporting_date']):
+    def parameters(self, by=['segment_id', 'forecast_reporting_date', 'scenario']):
         '''
         Summarise the parameters.
 
