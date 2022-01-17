@@ -82,7 +82,7 @@ class Scenarios:
 
     @classmethod
     def from_assumptions(cls, url: Path):
-        """
+        r"""
         Create a `Scenarios` object from an Excel file containing Monte-Carlo assumptions.
 
         The forecast model is of the form:
