@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from z_model.cli import run, Methods, generate_scenarios, about
+from z_model.__main__ import run, Methods, generate_scenarios, about
 
 
 def test_cli(tmp_path):

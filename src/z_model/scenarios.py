@@ -3,7 +3,6 @@ from numpy import exp
 from functools import reduce
 from datetime import datetime
 from pathlib import Path
-import seaborn as sns
 from .series import Series
 from .file_reader import read_file
 
@@ -41,17 +40,6 @@ class Scenarios:
         Convert the scenarios to a DataFrame
         """
         return concat([scenario.data for _, scenario in self.items()])
-
-    def plot(self, item: str):
-        """
-        Plot the scenarios
-
-        :param item: The `y` variable in the plot. Needs to be one of the scenario variables.
-
-        """
-        data = self.as_dataframe()
-        data.SCENARIO = data.SCENARIO.astype(str)
-        sns.relplot(data=data, x='DATE', y=item, hue='SCENARIO', kind='line')
 
     @property
     def scenarios(self):
