@@ -69,7 +69,7 @@ PyInstaller.__main__.run([
     r'--onefile',
     r'--clean',
     r'--noupx',
-    r'--icon=..\\icon.ico',
+    r'--icon=.\\icon.ico',
     r'--name=Z-Model',
     f'--key={Z_MODEL_KEY}',
     r'--version-file=.\\build\\file_version_info.txt',
