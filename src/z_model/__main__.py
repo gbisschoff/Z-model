@@ -9,8 +9,8 @@ from z_model.exeutor import Methods
 
 
 __author__ = "Geyer Bisschoff"
-__copyright__ = "Geyer Bisschoff"
-__license__ = "MIT"
+__copyright__ = "Deloitte LLP"
+__license__ = "Proprietary Software License"
 
 app = typer.Typer()
 
@@ -25,9 +25,9 @@ def about():
     Z-Model
     =======================
     Version: {__version__}
-    Author: {__author__}
-    License: {__license__}
     Copyright: {__copyright__}
+    License: {__license__}
+    Author: {__author__}
     """
     )
 
