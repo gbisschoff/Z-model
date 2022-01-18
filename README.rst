@@ -53,9 +53,8 @@ How to install the Z-model package:
 4. Inside the directory create a virtual environment to store all your packages :code:`py -m venv .venv`
 5. Activate the virtual environment :code:`source .venv/Scripts/activate`
 6. Upgrade pip and setuptools :code:`py -m pip install --upgrade pip`
-7. Install Z-model's dependencies:
-   :code:`pip install --trusted-host raw.githubusercontent.com -r https://raw.githubusercontent.com/gbisschoff/Z-model/main/requirements.txt`
-8. Install the Z-model :code:`pip install git+https://github.com/gbisschoff/Z-model.git`
+7. Install the Z-model :code:`pip install git+https://github.com/gbisschoff/Z-model.git`. To install a specific version
+   run :code:`pip install git+https://github.com/gbisschoff/Z-model.git@v0.2.3`, substituting the version number.
 
 
 How to run the Z-model:
@@ -65,10 +64,13 @@ Once the Z-model is installed, the CLI can be used to produce ECL results.
 It is important to ensure the inputs are correctly configured. You can find templates with dummy inputs in
 the `data <./data>`_ directory.
 
-1. Open your favourite CLI, e.g. Git Bash, in the Z-model directory.
+1. Open your favourite console, e.g. Git Bash, in the Z-model directory.
 2. Ensure the virtual environment in which the Z-model was installed is activated.
    This can be done using :code:`source .venv/Scripts/activate` in Git Bash.
 3. execute :code:`z_model run --help` to get help on how to use the Z-model CLI.
+
+Alternatively, use the ``Z-Model.exe`` which has no dependencies and can be used directly by running
+:code:`Z-Model.exe run --help` in your favourite console.
 
 FAQ
 ***
