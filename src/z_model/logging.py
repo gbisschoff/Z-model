@@ -14,8 +14,7 @@ class TyperLoggerHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         echo(self.format(record))
 
-
-formatter = logging.Formatter("[%(asctime)s] %(levelname)s:%(name)s:%(message)s")
+formatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(name)s: %(message)s")
 handler = TyperLoggerHandler()
 handler.setFormatter(formatter)
 logger: logging.Logger = logging.getLogger('Z-Model')
@@ -28,7 +27,6 @@ def configure_logger(verbose: bool) -> None:
 
     :param verbose: Print verbose logging information.
     """
-
     if verbose:
         logger.setLevel(logging.DEBUG)
     else:

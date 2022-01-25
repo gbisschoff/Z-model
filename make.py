@@ -61,6 +61,8 @@ VSVersionInfo(
 with open('.\\build\\file_version_info.txt', 'w') as f:
     f.write(file_version_info)
 
+with open('.\\build\\version', 'w') as f:
+    f.write(version)
 
 PyInstaller.__main__.run([
     r'.\\src\\z_model\\__main__.py',
@@ -69,10 +71,13 @@ PyInstaller.__main__.run([
     r'--onefile',
     r'--clean',
     r'--noupx',
-    r'--icon=.\\icon.ico',
-    r'--name=Z-Model',
+    r'--specpath=.\\build\\',
+    r'--icon=..\\icon.ico',
+    f'--name=Z-Model-{version}',
     f'--key={Z_MODEL_KEY}',
-    r'--version-file=.\\build\\file_version_info.txt',
+    r'--version-file=.\\file_version_info.txt',
+    r'--add-data=.\\version;.\\z_model\\data',
+    r'--add-data=..\\src\\z_model\\data\\verify.key;.\\z_model\\data',
     r'--exclude-module=matplotlib',
     r'--exclude-module=PIL',
     r'--exclude-module=tkinter',

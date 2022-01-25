@@ -72,6 +72,7 @@ class Scenarios:
         """
         data = read_file(
             url=url,
+            sheet_name='DATA',
             dtype={
                 'SCENARIO': str
             },
