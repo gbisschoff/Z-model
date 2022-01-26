@@ -68,16 +68,16 @@ class TransitionMatrix:
         za = z.values[:, newaxis, newaxis]
 
         if method.upper() == 'METHOD-1':
-            cttc = cumsum(ttc, axis=1)
+            cttc = flip(cumsum(flip(ttc, axis=1), axis=1), axis=1)
             cttc[cttc > 1] = 1
             cttc[cttc < 0] = 0
 
             default_distance = normal.ppf(cttc)
 
             if calibrated:
-                pit = diff(normal.cdf(default_distance + za * (rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+                pit = -diff(normal.cdf(default_distance - za * (rho ** 0.5) / (1 - rho) ** 0.5), append=0)
             else:
-                pit = diff(normal.cdf((default_distance + za * rho ** 0.5) / (1 - rho) ** 0.5), prepend=0)
+                pit = -diff(normal.cdf((default_distance - za * rho ** 0.5) / (1 - rho) ** 0.5), append=0)
 
         elif method.upper() == 'METHOD-2':
             cttc = flip(cumsum(flip(ttc, axis=1), axis=1), axis=1)
