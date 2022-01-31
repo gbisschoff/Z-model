@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 import rsa
+from rsa.pkcs1 import VerificationError
 
 from .cryptography import PublicKey, PrivateKey
 from .logging import logger
@@ -24,18 +25,25 @@ class License():
         self.signature = signature
 
     def is_valid(self):
-        expiration_date_str = self.information.get('expiration_date', None)
-        if expiration_date_str:
-            expiration_date = date.fromisoformat(expiration_date_str)
-            if expiration_date < date.today():
-                raise ValueError(f'The license expired on the {expiration_date}.')
+        try:
+            logger.info(f'Checking user license. {self.information=} {self.signature=}')
+            expiration_date_str = self.information.get('expiration_date', None)
+            if expiration_date_str:
+                expiration_date = date.fromisoformat(expiration_date_str)
+                if expiration_date < date.today():
+                    raise VerificationError(f'The license expired on the {expiration_date}.')
 
-            time_remaining = (expiration_date - date.today())
-            if time_remaining.days <= 30:
-                logger.warning(f'The license expires in {time_remaining.days} days on {expiration_date}.')
+                time_remaining = (expiration_date - date.today())
+                if time_remaining.days <= 30:
+                    logger.warning(f'The license expires in {time_remaining.days} days on {expiration_date}.')
 
-        msg = json.dumps(self.information).encode()
-        return rsa.verify(msg, b64decode(self.signature.encode()), VERIFY_KEY) == HASH_METHOD
+            msg = json.dumps(self.information).encode()
+            is_valid = rsa.verify(msg, b64decode(self.signature.encode()), VERIFY_KEY) == HASH_METHOD
+        except Exception as e:
+            logger.error(e)
+            is_valid = False
+
+        return is_valid
 
     @classmethod
     def create_license(cls, information: dict, sign_key: PrivateKey):
