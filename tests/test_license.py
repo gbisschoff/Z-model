@@ -19,10 +19,8 @@ def test_license(tmp_path):
     l = License.load(d / '.license')
     assert isinstance(l, License)
 
-    with pytest.raises(ValueError):
-        l.information['expiration_date'] = '1900-01-01'
-        l.is_valid()
+    l.information['expiration_date'] = '1900-01-01'
+    assert l.is_valid() is False
 
-    with pytest.raises(rsa.pkcs1.VerificationError):
-        l.information['expiration_date'] = '2999-12-31'
-        l.is_valid()
+    l.information['expiration_date'] = '2999-12-31'
+    assert l.is_valid() is False

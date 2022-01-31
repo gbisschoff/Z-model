@@ -22,7 +22,6 @@ def test_cli(tmp_path):
         assumptions=Path('./data/ASSUMPTIONS.xlsx'),
         scenarios=Path('./data/SCENARIOS.xlsx'),
         outfile=Path(d / 'out.zip'),
-        method=Methods.ProgressMap,
-        verbose=True
+        method=Methods.ProgressMap
     )
     assert Path(d / 'out.zip').exists()

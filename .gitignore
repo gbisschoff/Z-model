@@ -56,8 +56,9 @@ MANIFEST
 
 # Project Folders
 scratch/
-data/
 /methodology/
 /Z-model.spec
 /.secrets/private.key
 /.secrets/public.key
+/data/
+/.pytest_tmpdir/

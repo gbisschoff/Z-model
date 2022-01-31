@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from z_model import __version__
-from z_model.logging import configure_logger, logger
+from z_model.logging import logger, logfile
 from z_model.exeutor import Methods
 from z_model.license import License
 
@@ -13,18 +13,19 @@ __author__ = "Geyer Bisschoff"
 __copyright__ = "Deloitte LLP"
 __license__ = "Proprietary Software License"
 
+logger.info(f'Logging setup. Saving too {logfile=}')
 app = typer.Typer()
-license = License.load(Path().home() / '.z_model_license')
+
+try:
+    license = License.load(Path().home() / '.z_model_license')
+except Exception as e:
+    logger.error(f'User license error. Please check that the user license is saved at the correct location. \n{e}')
 
 @app.command()
 def about():
     '''
     Print Z-model about information.
     '''
-    try:
-        is_valid = license.is_valid()
-    except Exception as e:
-        is_valid = str(e)
 
     return typer.echo(
     f"""
@@ -41,7 +42,7 @@ def about():
     Email: {license.information.get('email', 'unknown')}
     Expiration Date: {license.information.get('expiration_date', 'unknown')}
     Product Code: {license.signature}
-    Validity: {is_valid}
+    Validity: {license.is_valid()}
     """
     )
 
@@ -49,8 +50,7 @@ def about():
 @app.command()
 def generate_scenarios(
     assumptions: Path,
-    outfile: Path,
-    verbose: bool = False
+    outfile: Path
 ):
     '''
     Generate macroeconomic scenarios using Monte Carlo
@@ -64,9 +64,6 @@ def generate_scenarios(
             from z_model.scenarios import Scenarios
             from z_model.file_reader import write_file
 
-            configure_logger(verbose)
-            logger.info(f'Debugging level set to {verbose=}')
-
             logger.info(f'Generating scenarios from monte-carlo assumptions ({assumptions=}).')
             scenarios = Scenarios.from_assumptions(url=assumptions)
             logger.info(f'Saving monte-carlo scenarios ({outfile=}).')
@@ -77,7 +74,8 @@ def generate_scenarios(
             logger.info("Done.")
 
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error(e)
+        raise Exception(e)
 
 
 @app.command()
@@ -86,8 +84,7 @@ def run(
         assumptions: Path,
         scenarios: Path,
         outfile: Path,
-        method: Methods = Methods.Map,
-        verbose: bool = False
+        method: Methods = Methods.Map
 ):
     '''
     Run the Z-model on specified inputs.
@@ -125,9 +122,6 @@ def run(
             from z_model.exeutor import Executor
             from z_model.file_reader import write_file
 
-            configure_logger(verbose)
-            logger.info(f'Debugging level set to {verbose=}')
-
             logger.info(f'Loading assumptions ({assumptions=}).')
             assumptions = Assumptions.from_file(url=assumptions)
 
@@ -150,7 +144,8 @@ def run(
             logger.info("Done.")
 
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error(e)
+        raise Exception(e)
 
 @app.command(hidden=True)
 def create_license(
@@ -178,7 +173,6 @@ def create_license(
     try:
         from z_model.cryptography import PrivateKey
         from z_model.license import create_license
-        configure_logger(verbose)
         logger.info(f'Loading sign-key. ({sign_key=})')
         sign_key = PrivateKey.load(sign_key)
         logger.info(f'Creating license. ({company_name=}, {email=}, {expiration_date=})')
@@ -186,7 +180,24 @@ def create_license(
         logger.info(f'Saving license. {outfile=}')
         l.save(outfile)
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error(e)
+        raise Exception(e)
+
+@app.command()
+def gui():
+    '''
+    Launch the Z-Model graphical user interface.
+    '''
+    from z_model.__gui__ import main
+    main()
+
+@app.callback(invoke_without_command=True)
+def default(ctx: typer.Context):
+    '''
+    Z-Model entry point
+    '''
+    if ctx.invoked_subcommand is None:
+        gui()
 
 def main():
     multiprocessing.freeze_support()

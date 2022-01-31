@@ -78,9 +78,9 @@ PyInstaller.__main__.run([
     r'--version-file=.\\file_version_info.txt',
     r'--add-data=.\\version;.\\z_model\\data',
     r'--add-data=..\\src\\z_model\\data\\verify.key;.\\z_model\\data',
+    r'--add-data=..\\src\\z_model\\data\\deloitte.png;.\\z_model\\data',
+    r'--add-data=..\\src\\z_model\\data\\icon.ico;.\\z_model\\data',
     r'--exclude-module=matplotlib',
-    r'--exclude-module=PIL',
-    r'--exclude-module=tkinter',
     r'--exclude-module=sqlite3',
     r'--exclude-module=pytest'
 ])
