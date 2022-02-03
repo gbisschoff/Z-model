@@ -161,7 +161,7 @@ class EADAssumptions:
         ``contractual_pmt * (1 + 10%)``
 
     '''
-    def __init__(self, type: str, exposure_at_default:float, ccf_method:str, ccf:str, fees_fixed:float, fees_pct:float, prepayment_pct:float):
+    def __init__(self, type: str, exposure_at_default:float, ccf_method:str, ccf:str, fees_fixed:float, fees_pct:float, prepayment_pct:float, default_penalty_pct:float, default_penalty_amt:float):
         self.type = type
         self.exposure_at_default = exposure_at_default
         self.ccf_method = ccf_method
@@ -169,6 +169,8 @@ class EADAssumptions:
         self.fees_fixed = fees_fixed
         self.fees_pct = fees_pct
         self.prepayment_pct = prepayment_pct
+        self.default_penalty_pct = default_penalty_pct
+        self.default_penalty_amt = default_penalty_amt
 
 
 class EIRAssumptions:
@@ -256,6 +258,8 @@ class Assumptions(dict):
             'ead_fees_fixed': float,
             'ead_fees_pct': float,
             'ead_prepayment_pct': float,
+            'ead_default_penalty_pct': float,
+            'ead_default_penalty_amt': float,
             'eir_base_rate': str
         },
         'TRANSITION_MATRIX': {
@@ -319,7 +323,9 @@ class Assumptions(dict):
                     ccf = d['ead_ccf'],
                     fees_fixed = d['ead_fees_fixed'],
                     fees_pct = d['ead_fees_pct'],
-                    prepayment_pct = d['ead_prepayment_pct']
+                    prepayment_pct = d['ead_prepayment_pct'],
+                    default_penalty_pct = d['ead_default_penalty_pct'],
+                    default_penalty_amt=d['ead_default_penalty_amt']
                 ),
                 lgd=LGDAssumptions(
                     type = d['lgd_type'],

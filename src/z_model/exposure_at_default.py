@@ -45,7 +45,7 @@ class AmortisingExposureAtDefault:
     Calculate the EAD using an amortisation table. This is done using the following set of equations:
 
     .. math::
-        EAD(t) = max( (balance(t) + arrears(t) ) / OutstandingBalance, 0)
+        EAD(t) = max( ( (balance(t) + arrears(t)) * (1 + DefaultPenaltyPct) + DefaultPenaltyAmt ) / OutstandingBalance, 0)
         balance(t) = max( OutstandingBalance / df(t) + ( CumulativeFees(t) - CumulativeCashflows(t) ), 0)
         CumulativeCashflows(t) = \sum_(i=0)^t (ContractualPayment \times I(IsPaymentPeriod(i)) \times (1 + PrepaymentPct) - FixedFees) \times df(i) / df(t)
         CumulativeFees(t) = \sum_(i=0)^t (( balance(i) + ContractualPayment \times I(IsPaymentPeriod(i)) ) \times FeesPct \times df(i)) / df(t)
@@ -58,11 +58,13 @@ class AmortisingExposureAtDefault:
 
 
     '''
-    def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, **kwargs):
+    def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):
         self.effective_interest_rate = effective_interest_rate
         self.fixed_fees = fixed_fees
         self.fees_pct = fees_pct
         self.prepayment_pct = prepayment_pct
+        self.default_penalty_pct = default_penalty_pct
+        self.default_penalty_amt = default_penalty_amt
 
     def __getitem__(self, account: Account):
         balance = account.outstanding_balance
@@ -90,7 +92,7 @@ class AmortisingExposureAtDefault:
         arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
         arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
 
-        ead = maximum((balance_t_pfees + arrears_t) / account.outstanding_balance, 0)
+        ead = maximum(((balance_t_pfees + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt) / account.outstanding_balance, 0)
 
         return Series(ead, index=account.remaining_life_index)
 

@@ -2,8 +2,21 @@
 Changelog
 =========
 
+Version 0.2.5-dev
+=============
+- improve EAD model flexibility by adding a default penalty percentage and penalty amount that could be added to the
+  EAD if an account enters default.
+
+Version 0.2.4
+=============
+
+- Integrate logging into the Z-model execution. Logs are now saved to ~/logs/Z-model
+- Add user license requirements. The user license should be saved at ~/.z_model_license and should be valid for the
+  model to execute otherwise an error is thrown.
+- Add a user friendly GUI to the Z-model CLI. This is now the default entry point into the Z-model.
+
 Version 0.2.3
-===========
+=============
 
 - Move logging from the CLI to own module
 - Create generate-scenario command to create Monte-Carlo scenarios and move it out of the run command
