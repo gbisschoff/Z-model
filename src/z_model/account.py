@@ -1,5 +1,5 @@
-from numpy import array, zeros
-from pandas import date_range, period_range, Int64Dtype, DataFrame
+from numpy import array, zeros, isnat
+from pandas import date_range, period_range, Int64Dtype, DataFrame, isnull
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +10,7 @@ class Account:
     '''
     Account
 
-    Each row in the :class:`AccountData` gets converted into an :class:`Account` object witht he same properties.
+    Each row in the :class:`AccountData` gets converted into an :class:`Account` object with the same properties.
     Two additional properties are added to the account as calculated fields. These are:
 
     * time_on_book: the difference in months betweent the origination date and reporting date.
@@ -18,7 +18,7 @@ class Account:
       end of the accounts remaining life.
 
     '''
-    def __init__(self, contract_id: str, outstanding_balance:float, limit:float, current_arrears:float, contractual_payment:float, contractual_freq:int, interest_rate_type:str, interest_rate_freq:int, fixed_rate:float, spread:float, origination_date:datetime, maturity_date:datetime, reporting_date:datetime, remaining_life:int, collateral_value:float, origination_rating:int, current_rating:int, watchlist:int, *args, **kwargs):
+    def __init__(self, contract_id: str, outstanding_balance:float, limit:float, current_arrears:float, contractual_payment:float, contractual_freq:int, interest_rate_type:str, interest_rate_freq:int, fixed_rate:float, spread:float, origination_date:datetime, payment_holiday_end_date:datetime, maturity_date:datetime, reporting_date:datetime, remaining_life:int, collateral_value:float, origination_rating:int, current_rating:int, watchlist:int, *args, **kwargs):
         self.contract_id = contract_id
         self.outstanding_balance = outstanding_balance
         self.limit = limit
@@ -28,6 +28,7 @@ class Account:
         self.fixed_rate = fixed_rate
         self.spread = spread
         self.origination_date = origination_date
+        self.payment_holiday_end_date = payment_holiday_end_date
         self.maturity_date = maturity_date
         self.reporting_date = reporting_date
         self.remaining_life = remaining_life
@@ -77,6 +78,9 @@ class AccountData:
 
     * origination_date (Date: YYYY-MM-DD): The contract origination date.
 
+    * payment_holiday_end_date (Date: YYYY-MM-DD): The date the payment holiday ends. If the end date is on the same
+      date when the next payment is due, it is assumed that the payment is required on that date.
+
     * reporting_date (Date: YYYY-MM-DD): The current reporting date. The model also supports running future and
       past reporting dates. Future reporting dates could be used to run business grow and ICAAP stress testing
       forecasts.
@@ -109,6 +113,7 @@ class AccountData:
         'fixed_rate': float,
         'spread': float,
         'origination_date': datetime,
+        'payment_holiday_end_date': datetime,
         'reporting_date': datetime,
         'remaining_life': int,
         'collateral_value': float,

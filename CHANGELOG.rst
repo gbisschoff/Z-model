@@ -6,6 +6,7 @@ Version 0.2.5-dev
 =============
 - improve EAD model flexibility by adding a default penalty percentage and penalty amount that could be added to the
   EAD if an account enters default.
+- improve EAD flexibility by adding a payment holiday.
 
 Version 0.2.4
 =============

@@ -15,7 +15,7 @@ The ``Exposure`` of an account is calculated as;
 
 '''
 from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum, ceil
-from pandas import Series
+from pandas import Series, isnull
 from .account import Account
 from .effective_interest_rate import EffectiveInterestRate
 from .assumptions import EADAssumptions
@@ -72,7 +72,8 @@ class AmortisingExposureAtDefault:
         eir = self.effective_interest_rate[account]
         df_t0 = 1 / cumprod(1 + eir)
 
-        is_pmt_period = ((account.remaining_life - t) % (12 / account.contractual_freq) == 0)
+        is_not_in_payment_holiday = 1 if isnull(account.payment_holiday_end_date) else (account.remaining_life_index >= account.payment_holiday_end_date)
+        is_pmt_period = ((account.remaining_life - t) % (12 / account.contractual_freq) == 0) * is_not_in_payment_holiday
         n_pmts = cumsum(is_pmt_period)
 
         pmt = account.contractual_payment * is_pmt_period
