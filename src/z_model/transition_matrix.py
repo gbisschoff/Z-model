@@ -56,7 +56,7 @@ class TransitionMatrix:
         return DataFrame(stmv[:, :, to_state], index=self.index[:-m])
 
     @classmethod
-    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, default_state:int=-1, freq: int = 12, calibrated:bool = True, method:str = 'METHOD-1', **kwargs):
+    def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, calibrated:bool=False, default_state:int=-1, freq: int = 12, method:str = 'METHOD-1', **kwargs):
 
         def fraction_matrix(x, freq):
             rs = fractional_matrix_power(x, 1 / freq)
@@ -65,7 +65,7 @@ class TransitionMatrix:
             return rs
 
         ttc = fraction_matrix(ttc_transition_matrix, freq)
-        za = z.values[:, newaxis, newaxis]
+        zt = z.values[:, newaxis, newaxis]
 
         if method.upper() == 'METHOD-1':
             cttc = flip(cumsum(flip(ttc, axis=1), axis=1), axis=1)
@@ -73,11 +73,10 @@ class TransitionMatrix:
             cttc[cttc < 0] = 0
 
             default_distance = normal.ppf(cttc)
-
             if calibrated:
-                pit = -diff(normal.cdf(default_distance - za * (rho ** 0.5) / (1 - rho) ** 0.5), append=0)
+                pit = -diff(normal.cdf((default_distance - zt * rho ** 0.5)), append=0)
             else:
-                pit = -diff(normal.cdf((default_distance - za * rho ** 0.5) / (1 - rho) ** 0.5), append=0)
+                pit = -diff(normal.cdf((default_distance - zt * rho ** 0.5) / (1 - rho) ** 0.5), append=0)
 
         elif method.upper() == 'METHOD-2':
             cttc = flip(cumsum(flip(ttc, axis=1), axis=1), axis=1)
@@ -88,9 +87,9 @@ class TransitionMatrix:
             DD = tile(B[:, default_state, newaxis], ttc.shape[-1])
 
             if calibrated:
-                pit_dd = (DD + (za * rho ** 0.5) / (1 - rho) ** 0.5)
+                pit_dd = ((DD + zt * rho ** 0.5))
             else:
-                pit_dd = ((DD + za * rho ** 0.5) / (1 - rho) ** 0.5)
+                pit_dd = ((DD + zt * rho ** 0.5) / (1 - rho) ** 0.5)
 
             BS = tile(subtract(B, DD, out=B, where=abs(B) != inf), (len(z), 1, 1))
             pit = diff(normal.cdf(add(BS, pit_dd, out=BS, where=abs(BS) != inf)), append=1)
