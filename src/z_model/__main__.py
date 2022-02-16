@@ -56,7 +56,7 @@ def generate_scenarios(
     Generate macroeconomic scenarios using Monte Carlo
 
     :param assumptions: the path to the MONTE_CARLO_ASSUMPTIONS.xlsx file.
-    :param outfile: the path to save the generated scenarios. Recommeded to be a .csv.gz file type.
+    :param outfile: the path to save the generated scenarios. Recommeded to be a .xlsx file type.
 
     '''
     try:
@@ -67,10 +67,7 @@ def generate_scenarios(
             logger.info(f'Generating scenarios from monte-carlo assumptions ({assumptions=}).')
             scenarios = Scenarios.from_assumptions(url=assumptions)
             logger.info(f'Saving monte-carlo scenarios ({outfile=}).')
-            write_file(
-                df=scenarios.as_dataframe(),
-                url=outfile
-            )
+            scenarios.to_file(url=outfile)
             logger.info("Done.")
 
     except Exception as e:

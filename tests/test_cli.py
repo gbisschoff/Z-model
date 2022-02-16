@@ -13,9 +13,9 @@ def test_cli(tmp_path):
 
     generate_scenarios(
         assumptions=Path('./data/MONTE_CARLO_ASSUMPTIONS.xlsx'),
-        outfile=Path(d / 'out-scenarios.csv.gz')
+        outfile=Path(d / 'out-scenarios.xlsx')
     )
-    assert Path(d / 'out-scenarios.csv.gz').exists()
+    assert Path(d / 'out-scenarios.xlsx').exists()
 
     run(
         account_data=Path('./data/account_level_data.xlsx'),

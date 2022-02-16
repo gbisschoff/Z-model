@@ -82,4 +82,12 @@ class Executor:
         """
         args = [(n, s, assumptions, account_data) for n, s in scenarios.items()]
         r = self.method.executor(self._run_scenario, args, desc='Scenarios', position=0)
-        return Results(merge(account_data.data, concat(r).reset_index(), how='left', on='contract_id'))
+
+        #Calculate weighted scenario
+        r = concat(r).reset_index().set_index(['contract_id', 'T', 'forecast_reporting_date'])
+        weights = scenarios.weights
+        rw = sum([d.drop(columns='scenario') * weights.get(n) for n, d in r.groupby('scenario')])
+        rw['scenario'] = 'Weighted'
+        rc = concat([r, rw]).reset_index()
+
+        return Results(merge(account_data.data, rc, how='left', on='contract_id'))

@@ -8,6 +8,7 @@ Version 0.2.5
   EAD if an account enters default.
 - improve EAD flexibility by adding a payment holiday.
 - fix Transition Matrix calibrated option to return the correct expected value
+- add calculated weighted scenario to output
 
 Version 0.2.4
 =============

@@ -1,4 +1,4 @@
-from pandas import read_excel, concat, DataFrame, date_range, merge
+from pandas import read_excel, concat, DataFrame, date_range, merge, ExcelWriter
 from numpy import exp
 from functools import reduce
 from datetime import datetime
@@ -10,10 +10,11 @@ class Scenario:
     """
     Container to store a single scenario's data
     """
-    def __init__(self, data: DataFrame, method: str = 'linear'):
+    def __init__(self, data: DataFrame, weight: float = 0, method: str = 'linear'):
         data = data.resample('M').interpolate(method)
         data['SCENARIO'] = data['SCENARIO'].interpolate(method='pad')
         self.data = data
+        self.weight = weight
 
     def __getitem__(self, item):
         return self.data[item]
@@ -48,12 +49,16 @@ class Scenarios:
         """
         return list(self.x.keys())
 
+    @property
+    def weights(self):
+        return {n:s.weight for n, s in self.items()}
+
     @classmethod
-    def from_dataframe(cls, data: DataFrame):
+    def from_dataframe(cls, data: DataFrame, weights: dict):
         """
         Create a :class:`Scenarios` object from a data frame.
         """
-        return cls({s: Scenario(d) for s, d in data.groupby('SCENARIO')})
+        return cls({s: Scenario(d, weights if isinstance(weights, float) else weights.get(s, 0)) for s, d in data.groupby('SCENARIO')})
 
     @classmethod
     def from_file(cls, url: Path):
@@ -79,7 +84,28 @@ class Scenarios:
             index_col='DATE',
             parse_dates=True
         )
-        return cls.from_dataframe(data)
+
+        weights = read_file(
+            url=url,
+            sheet_name='SCENARIO_WEIGHTS',
+            dtype={
+                'SCENARIO': str,
+                'WEIGHT': float
+            },
+            index_col='SCENARIO'
+        ).to_dict().get('WEIGHT')
+
+        return cls.from_dataframe(data, weights)
+
+    def to_file(self, url: Path):
+        data = self.as_dataframe()
+        weights = DataFrame({'WEIGHT': self.weights})
+        weights.index.name = 'SCENARIO'
+
+        with ExcelWriter(url, engine='openpyxl') as writer:
+            data.to_excel(writer, sheet_name='DATA')
+            weights.to_excel(writer, sheet_name='SCENARIO_WEIGHTS')
+
 
     @classmethod
     def from_assumptions(cls, url: Path):
@@ -157,6 +183,8 @@ class Scenarios:
             index_col='NAME',
             engine='openpyxl'
         )
+        m = assumptions['m'].unique()
+        if len(m) > 1: raise ValueError('The "m" parameter in the Monte-Carlo assumptions is not unique')
 
         def create_series(name, kwargs):
             start_date = kwargs.pop('START_DATE')
@@ -173,4 +201,4 @@ class Scenarios:
         variables = [create_series(name, args) for name, args in assumptions.iterrows()]
         data = reduce(lambda left, right: merge(left, right, on=['DATE', 'SCENARIO'], how='inner'), variables)\
             .set_index('DATE')
-        return cls.from_dataframe(data)
+        return cls.from_dataframe(data, weights=float(1/m))
