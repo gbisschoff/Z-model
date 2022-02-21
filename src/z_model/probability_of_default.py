@@ -85,9 +85,9 @@ class TransitionMatrixProbabilityOfDefault:
         PD(t) = \sum_{r \not= D} P[R(t)=r | R(t=0) = C] \times P[R(t+1)=D | R(t)=r]
 
     '''
-    def __init__(self, transition_matrix: TransitionMatrix, default_state: int = -1, **kwargs):
+    def __init__(self, transition_matrix: TransitionMatrix, **kwargs):
         self.transition_matrix = transition_matrix
-        self.default_state = default_state
+        self.default_state = transition_matrix.default_state
 
     def __getitem__(self, account: Account):
         s = stack(
@@ -105,7 +105,7 @@ class ProbabilityOfDefault:
     @classmethod
     def from_assumptions(cls, assumptions:  PDAssumptions, transition_matrix: TransitionMatrix):
         if assumptions.type.upper() == 'TRANSITION_MATRIX':
-            return TransitionMatrixProbabilityOfDefault(transition_matrix, default_state=assumptions.default_state)
+            return TransitionMatrixProbabilityOfDefault(transition_matrix)
         else:
             raise ValueError(f'Only TransitionMatrix PDs are supported.')
 

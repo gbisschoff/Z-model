@@ -9,6 +9,9 @@ Version 0.2.5
 - improve EAD flexibility by adding a payment holiday.
 - fix Transition Matrix calibrated option to return the correct expected value
 - add calculated weighted scenario to output
+- add PWO calculations into code (rather than in excel template). This means that the default_state assumption has been
+  replaced by cure_state. It also means that the WO column is no longer required in the transition matrix since it is
+  dynamically added to the transition matrix.
 
 Version 0.2.4
 =============

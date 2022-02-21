@@ -1,6 +1,6 @@
 from pandas import DataFrame
 from numpy import array, cumprod
-from .transition_matrix import TransitionMatrix
+from .transition_matrix import TransitionMatrix, make_monthly_matrix
 from .effective_interest_rate import EffectiveInterestRate
 from .loss_given_default import LossGivenDefault
 from .stage_probability import StageProbability
@@ -117,13 +117,21 @@ class ECLModel:
         :param scenario: object of type :class:`Scenario`
 
         '''
+
+        p = make_monthly_matrix(
+            x=segment_assumptions.pd.transition_matrix,
+            frequency=segment_assumptions.pd.frequency,
+            pcure=segment_assumptions.lgd.probability_of_cure,
+            cure_state=segment_assumptions.pd.cure_state,
+            time_to_sale=segment_assumptions.lgd.time_to_sale
+        )
+
         tm = TransitionMatrix.from_assumption(
-            ttc_transition_matrix=segment_assumptions.pd.transition_matrix,
+            ttc_transition_matrix=p,
             rho=segment_assumptions.pd.rho,
             z=scenario[segment_assumptions.pd.z_index],
-            freq=segment_assumptions.pd.frequency,
             calibrated=segment_assumptions.pd.calibrated,
-            default_state=segment_assumptions.pd.default_state,
+            default_state=-2, # WO state added when monthly matrix was created
             method=segment_assumptions.pd.method
         )
         eir = EffectiveInterestRate.from_assumptions(segment_assumptions.eir, scenario)

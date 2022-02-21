@@ -58,12 +58,12 @@ class PDAssumptions:
         ``METHOD-1`` and ``METHOD-2``. See :class:`TransitionMatrix` for more details.
 
     '''
-    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, default_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array, method:str):
+    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, cure_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array, method:str):
         self.type = type
         self.z_index = z_index
         self.rho = rho
         self.calibrated = calibrated
-        self.default_state = default_state
+        self.cure_state = cure_state
         self.frequency = frequency
         self.time_in_watchlist = time_in_watchlist
         self.transition_matrix = transition_matrix
@@ -237,7 +237,7 @@ class Assumptions(dict):
             'pd_z_index': str,
             'pd_rho': float,
             'pd_calibrated': bool,
-            'pd_default_state': int,
+            'pd_cure_state': int,
             'pd_frequency': int,
             'pd_time_in_watchlist': int,
             'lgd_type': str,
@@ -311,7 +311,7 @@ class Assumptions(dict):
                     z_index = d['pd_z_index'],
                     rho = d['pd_rho'],
                     calibrated = d['pd_calibrated'],
-                    default_state = d['pd_default_state'],
+                    cure_state = d['pd_cure_state'],
                     frequency = d['pd_frequency'],
                     time_in_watchlist = d['pd_time_in_watchlist'],
                     transition_matrix = array(transition_matrices.drop(columns='from').loc[segment_id]),
