@@ -81,6 +81,7 @@ def run(
         assumptions: Path,
         scenarios: Path,
         outfile: Path,
+        portfolio_assumptions: Optional[Path] = None,
         method: Methods = Methods.Map
 ):
     '''
@@ -115,7 +116,7 @@ def run(
         if license.is_valid():
             from z_model.assumptions import Assumptions
             from z_model.scenarios import Scenarios
-            from z_model.account import AccountData
+            from z_model.account import AccountData, SimulatedAccountData
             from z_model.exeutor import Executor
             from z_model.file_reader import write_file
 
@@ -127,6 +128,12 @@ def run(
 
             logger.info(f'Loading account level data ({account_data=}).')
             account_data = AccountData.from_file(url=account_data)
+
+            if portfolio_assumptions:
+                logger.info(f'Loading business assumptions ({portfolio_assumptions=}).')
+                simulated_data = SimulatedAccountData.from_file(portfolio_assumptions)
+                logger.info(f'Combining simulated accounts with actual accounts.')
+                account_data = account_data + simulated_data
 
             logger.info('Starting calculations.')
             results = Executor(method=method).execute(

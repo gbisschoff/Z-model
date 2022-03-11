@@ -1,9 +1,10 @@
 from numpy import array, zeros, isnat
-from pandas import date_range, period_range, Int64Dtype, DataFrame, isnull
+from pandas import date_range, period_range, Int64Dtype, DataFrame, isnull, NA, concat
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from pathlib import Path
 from .file_reader import read_file
+from pandas.tseries.offsets import MonthEnd
 
 
 class Account:
@@ -134,6 +135,12 @@ class AccountData:
         '''
         return len(self.data.index)
 
+    def __add__(self, other):
+        if not isinstance(other, AccountData):
+            raise TypeError('Object is not of type AccountData')
+
+        return AccountData(concat([self.data, other.data]))
+
     @classmethod
     def from_file(cls, url: Path):
         """
@@ -144,4 +151,81 @@ class AccountData:
             The function support file formats as specified by the `file_reader` module.
         """
         data = read_file(url=url, dtype=cls.DICTIONARY, index_col='contract_id')
+        data['account_type'] = 'Actual'
         return cls(data=data)
+
+
+
+class SimulatedAccountData(AccountData):
+    '''
+    Generate a dummy loan book based on portfolio assumptions
+
+    The PORTFOLIO_ASSUMPTIONS data template should be used.
+    '''
+    DICTIONARY = {
+        'segment_id': int,
+        'type': str,
+        'term': int,
+        'balloon': float,
+        'interest_rate_type': str,
+        'interest_rate': float,
+        'spread': float,
+        'frequency': int,
+        'origination_rating': int,
+        'ltv': float
+    }
+
+    @classmethod
+    def from_file(cls, url: Path):
+
+        def PMT(PV, i, n, FV):
+            return (PV - FV * (1 + i) ** -n) / ((1 - (1 + i) ** -n) / i)
+
+        def make_account(id, segment_id, type, term, balloon, interest_rate_type, interest_rate, spread, frequency,
+                         origination_rating, ltv, origination_date, origination_amount):
+
+            if type in ('AMORTISING', 'IO'):
+                balloon = origination_amount * balloon
+                pmt = PMT(origination_amount, interest_rate / frequency, term / 12 * frequency, balloon)
+            else:
+                pmt = 0
+
+            collateral_value = origination_amount / ltv if ltv > 0 else 0
+
+            return {
+                'contract_id': f'FA-{id:06}',
+                'segment_id': segment_id,
+                'outstanding_balance': origination_amount if type != 'REVOLVING' else 0,
+                'limit': origination_amount if type == 'REVOLVING' else 0,
+                'current_arrears': 0,
+                'contractual_payment': pmt,
+                'contractual_freq': frequency,
+                'interest_rate_type': interest_rate_type,
+                'interest_rate_freq': 12,
+                'fixed_rate': interest_rate,
+                'spread': spread,
+                'origination_date': origination_date,
+                'payment_holiday_end_date': NA,
+                'reporting_date': origination_date + MonthEnd(0),
+                'remaining_life': term,
+                'collateral_value': collateral_value,
+                'origination_rating': origination_rating,
+                'current_rating': origination_rating,
+                'watchlist': NA
+            }
+
+        data = (
+            read_file(url, dtype=cls.DICTIONARY, sheet_name='ASSUMPTIONS')
+                .melt(
+                    id_vars=['segment_id', 'type', 'term', 'balloon', 'interest_rate_type', 'interest_rate', 'spread', 'frequency',
+                             'origination_rating', 'ltv'],
+                    var_name='origination_date',
+                    value_name='origination_amount'
+                )
+                .query('origination_amount > 0')
+                .reset_index()
+                .rename(columns={'index': 'id'})
+        )
+        accounts = DataFrame([make_account(**d) for i, d in data.iterrows()]).set_index('contract_id')
+        accounts['account_type'] = 'Simulated'
+        return cls(data=accounts)
