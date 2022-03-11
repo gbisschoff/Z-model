@@ -40,6 +40,7 @@ inputs = [
     [sg.Text('Assumptions:\t\t'), sg.Input(size=(20,0)), sg.FileBrowse(key='-ASSUMPTIONS-')],
     [sg.Text('Macroeconomic Scenarios:\t'), sg.Input(size=(20,0)), sg.FileBrowse(key='-SCENARIOS-')],
     [sg.Text('Results:\t\t\t'), sg.Input(size=(20,0)), sg.FileSaveAs('Browse', key='-RESULTS-', default_extension='.zip', file_types=(('application/zip', '*.zip'),))],
+    [sg.Text('Portfolio Assumptions:\t'), sg.Input(size=(20,0),default_text='Optional'), sg.FileBrowse(key='-PORTFOLIO-ASSUMPTIONS-')],
 ]
 
 actions = [
@@ -55,7 +56,7 @@ notes = [
 layout = [
     [sg.Column(top_banner, size=(400, 60))],
     [sg.HorizontalSeparator(pad=(0,5))],
-    [sg.Column(inputs, size=(400, 170))],
+    [sg.Column(inputs, size=(400, 200))],
     [sg.HorizontalSeparator(pad=(0,10))],
     [sg.Column(actions, size=(400, 80))],
     [sg.Column(notes, size=(400, 40))],
@@ -89,6 +90,7 @@ def main():
                             assumptions=Path(values['-ASSUMPTIONS-']),
                             scenarios=Path(values['-SCENARIOS-']),
                             outfile=Path(values['-RESULTS-']),
+                            portfolio_assumptions=Path(values['-PORTFOLIO-ASSUMPTIONS-']) if values['-PORTFOLIO-ASSUMPTIONS-'] != '' else None,
                             method=Methods.ProgressMap
                         )
                         window['progressbar'].update_bar(100)
