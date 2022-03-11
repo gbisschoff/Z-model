@@ -35,7 +35,7 @@ class ConstantExposureAtDefault:
         self.exposure_at_default = exposure_at_default
 
     def __getitem__(self, account: Account):
-        return Series(self.exposure_at_default, index=account.remaining_life_index)
+        return Series(account.outstanding_balance * self.exposure_at_default, index=account.remaining_life_index)
 
 
 class AmortisingExposureAtDefault:
@@ -93,7 +93,7 @@ class AmortisingExposureAtDefault:
         arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
         arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
 
-        ead = maximum(((balance_t_pfees + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt) / account.outstanding_balance, 0)
+        ead = maximum(((balance_t_pfees + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt), 0)
 
         return Series(ead, index=account.remaining_life_index)
 
@@ -116,18 +116,17 @@ class CCFExposureAtDefault:
     def __getitem__(self, account: Account):
         if self.ccf_method.upper() == 'METHOD-1':
             return Series(
-                self.ccf,
+                account.outstanding_balance * self.ccf,
                 index=account.remaining_life_index
             )
         elif self.ccf_method.upper() == 'METHOD-2':
             return Series(
-                account.limit * self.ccf / account.outstanding_balance,
+                account.limit * self.ccf,
                 index=account.remaining_life_index
             )
         elif self.ccf_method.upper() == 'METHOD-3':
             return Series(
-                (account.outstanding_balance + (account.limit - account.outstanding_balance) * self.ccf) /
-                account.outstanding_balance,
+                (account.outstanding_balance + (account.limit - account.outstanding_balance) * self.ccf),
                 index=account.remaining_life_index
             )
         else:

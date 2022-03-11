@@ -17,23 +17,23 @@ class Results:
     def __init__(self, data: DataFrame):
         self.data = data
 
-    def summarise(self, by=['segment_id', 'forecast_reporting_date', 'scenario']):
+    def summarise(self, by=['account_type', 'segment_id', 'forecast_reporting_date', 'scenario']):
         '''
         Summarise the ECL results.
 
-        :param by: a list of columns to summarise by. (Default: ``['segment_id', 'scenario', 'forecast_reporting_date']``)
+        :param by: a list of columns to summarise by. (Default: ``['account_type', 'segment_id', 'scenario', 'forecast_reporting_date']``)
 
         '''
-        df = self.data[[*by, 'outstanding_balance', 'EAD(t)', 'P(S=1)', 'P(S=2)', 'P(S=3)', 'P(S=WO)', 'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)']].copy()
+        df = self.data[[*by, 'EAD(t)', 'P(S=1)', 'P(S=2)', 'P(S=3)', 'P(S=WO)', 'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)']].copy()
 
-        df['Exposure(t)_1'] = df['outstanding_balance'] * df['EAD(t)'] * df['P(S=1)']
-        df['Exposure(t)_2'] = df['outstanding_balance'] * df['EAD(t)'] * df['P(S=2)']
-        df['Exposure(t)_3'] = df['outstanding_balance'] * df['EAD(t)'] * df['P(S=3)']
-        df['Exposure(t)_wo'] = df['outstanding_balance'] * df['EAD(t)'] * df['P(S=WO)']
+        df['Exposure(t)_1'] = df['EAD(t)'] * df['P(S=1)']
+        df['Exposure(t)_2'] = df['EAD(t)'] * df['P(S=2)']
+        df['Exposure(t)_3'] = df['EAD(t)'] * df['P(S=3)']
+        df['Exposure(t)_wo'] = df['EAD(t)'] * df['P(S=WO)']
 
-        df['ECL(t)_1'] = df['Exposure(t)_1'] * df['STAGE1(t)']
-        df['ECL(t)_2'] = df['Exposure(t)_2'] * df['STAGE2(t)']
-        df['ECL(t)_3'] = df['Exposure(t)_3'] * df['STAGE3(t)']
+        df['ECL(t)_1'] = df['STAGE1(t)'] * df['P(S=1)']
+        df['ECL(t)_2'] = df['STAGE2(t)'] * df['P(S=2)']
+        df['ECL(t)_3'] = df['STAGE3(t)'] * df['P(S=3)']
         df['ECL(t)_wo'] = df['Exposure(t)_wo']
 
         rs = (

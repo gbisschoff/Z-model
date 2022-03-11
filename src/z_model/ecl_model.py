@@ -67,21 +67,21 @@ class ECLModel:
         stage_p = self.stage_probability[account]
 
         marginal_ecl = pd * ead * lgd * df_t0
-        stage_3_ecl = lgd
+        stage_3_ecl = ead * lgd
         stage_2_ecl_t0 = marginal_ecl[::-1].cumsum()[::-1]
         stage_2_ecl = stage_2_ecl_t0 * df_t
         stage_1_ecl_t0 = stage_2_ecl_t0 - stage_2_ecl_t0.shift(-12).fillna(0)
         stage_1_ecl = stage_1_ecl_t0 * df_t
 
-        exposure = account.outstanding_balance * ead * (stage_p[1]+stage_p[2]+stage_p[3])
-        ecl = account.outstanding_balance * ead * (
-                    stage_p[1] * stage_1_ecl +
-                    stage_p[2] * stage_2_ecl +
-                    stage_p[3] * stage_3_ecl
-                )
+        exposure = ead * (stage_p[1]+stage_p[2]+stage_p[3])
+        ecl = (
+            stage_p[1] * stage_1_ecl +
+            stage_p[2] * stage_2_ecl +
+            stage_p[3] * stage_3_ecl
+        )
 
         coverage_ratio = ecl / exposure
-        write_off = account.outstanding_balance * ead * stage_p['wo']
+        write_off = ead * stage_p['wo']
 
         result = DataFrame({
             'contract_id': account.contract_id,

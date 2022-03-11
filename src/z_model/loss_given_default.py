@@ -60,9 +60,9 @@ class SecuredLossGivenDefault:
             (1 - self.probability_of_cure) *
             maximum(
                 (
-                    account.outstanding_balance * ead
+                    ead
                     - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
-                ) / (account.outstanding_balance * ead)
+                ) / ead
                 ,self.floor
             )
         )
@@ -152,9 +152,9 @@ class ConstantGrowthLossGivenDefault:
             (1 - self.probability_of_cure) *
             maximum(
                 (
-                    account.outstanding_balance * ead
+                    ead
                     - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
-                ) / (account.outstanding_balance * ead)
+                ) / ead
                 ,self.floor
             )
         )
