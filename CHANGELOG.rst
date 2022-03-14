@@ -2,6 +2,13 @@
 Changelog
 =========
 
+Version 0.2.6
+=============
+- Add PORTFOLIO_ASSUMPTIONS as an optional input into the calculation. It then generates dummy accounts for hte stress
+  test model.
+- add lifetime PD to the detailed-output
+- fix EAD calculations for CCF methods (divided by zero error). EAD is now a monetary amount instead of a factor.
+
 Version 0.2.5
 =============
 - improve EAD model flexibility by adding a default penalty percentage and penalty amount that could be added to the
