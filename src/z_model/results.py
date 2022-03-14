@@ -17,6 +17,18 @@ class Results:
     def __init__(self, data: DataFrame):
         self.data = data
 
+    def reporting_rate_results(self):
+        '''
+        Return only the IFRS9 Reporting date results
+        '''
+        rs = self.data[
+            (self.data['account_type']=='Actual')
+            & (self.data['T']==0)
+        ].copy()
+        rs.drop(columns=['T', 'forecast_reporting_date', 'PD(t)', 'DF(t)', 'Marginal CR(t)', 'Write-off(t)'], inplace=True)
+        return rs
+
+
     def summarise(self, by=['account_type', 'segment_id', 'forecast_reporting_date', 'scenario']):
         '''
         Summarise the ECL results.
@@ -108,5 +120,6 @@ class Results:
 
         with ZipFile(url, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
             zf.writestr("detailed-result.csv", self.data.to_csv(index=False))
+            zf.writestr("reporting-date-result.csv", self.reporting_rate_results().to_csv(index=False))
             zf.writestr("summary.csv", self.summarise().to_csv(index=False))
             zf.writestr("parameters.csv", self.parameters().to_csv(index=False))

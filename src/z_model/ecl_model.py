@@ -89,6 +89,7 @@ class ECLModel:
             'forecast_reporting_date': account.remaining_life_index,
             'PD(t)': pd,
             '12mPD(t)': pd_12m,
+            'Lifetime PD(t)': cpd_12m,
             'EAD(t)': ead,
             'LGD(t)': lgd,
             'DF(t)': df_t0,
