@@ -2,8 +2,13 @@
 Changelog
 =========
 
+Version 0.2.7
+=============
+- fix SimulatedAccountData to dynamically pick index columns before doing anti-pivot in case there are additional columns.
+
 Version 0.2.6
 =============
+- Add ability to simulate accounts via SimulatedAccountData class
 - Add PORTFOLIO_ASSUMPTIONS as an optional input into the calculation. It then generates dummy accounts for hte stress
   test model.
 - add lifetime PD to the detailed-output
