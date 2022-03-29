@@ -214,18 +214,20 @@ class SimulatedAccountData(AccountData):
                 'watchlist': NA
             }
 
+        data = read_file(url, dtype=cls.DICTIONARY, sheet_name='ASSUMPTIONS')
+        id_vars = [c for c in data.columns if isinstance(c, str)]
+        keep_cols = ['id', *cls.DICTIONARY.keys(), 'origination_date', 'origination_amount']
         data = (
-            read_file(url, dtype=cls.DICTIONARY, sheet_name='ASSUMPTIONS')
+                data
                 .melt(
-                    id_vars=['segment_id', 'type', 'term', 'balloon', 'interest_rate_type', 'interest_rate', 'spread', 'frequency',
-                             'origination_rating', 'ltv'],
+                    id_vars=id_vars,
                     var_name='origination_date',
                     value_name='origination_amount'
                 )
                 .query('origination_amount > 0')
                 .reset_index()
                 .rename(columns={'index': 'id'})
-        )
+        )[keep_cols]
         accounts = DataFrame([make_account(**d) for i, d in data.iterrows()]).set_index('contract_id')
         accounts['account_type'] = 'Simulated'
         return cls(data=accounts)

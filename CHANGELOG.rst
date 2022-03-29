@@ -2,6 +2,14 @@
 Changelog
 =========
 
+Version 0.2.7
+=============
+- fix SimulatedAccountData to dynamically pick index columns before doing anti-pivot in case there are additional columns.
+
+Version 0.2.6
+=============
+- Add ability to simulate accounts via SimulatedAccountData class
+
 Version 0.2.5
 =============
 - improve EAD model flexibility by adding a default penalty percentage and penalty amount that could be added to the
