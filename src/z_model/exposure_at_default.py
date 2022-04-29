@@ -38,6 +38,38 @@ class ConstantExposureAtDefault:
         return Series(account.outstanding_balance * self.exposure_at_default, index=account.remaining_life_index)
 
 
+class BulletExposureAtDefault:
+    '''
+    Bullet EAD
+
+    Calculate the EAD using an interest rate calculation method.
+
+    '''
+    def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):
+        self.effective_interest_rate = effective_interest_rate
+        self.fixed_fees = fixed_fees
+        self.fees_pct = fees_pct
+        self.prepayment_pct = prepayment_pct
+        self.default_penalty_pct = default_penalty_pct
+        self.default_penalty_amt = default_penalty_amt
+
+    def __getitem__(self, account: Account):
+        balance = account.outstanding_balance
+        t = arange(account.remaining_life) + 1
+        eir = self.effective_interest_rate[account]
+        df_t0 = 1 / cumprod(1 + eir + self.fees_pct - self.prepayment_pct)
+
+        cf = repeat(self.fixed_fees, account.remaining_life)
+        cum_cf_t = cumsum(cf * df_t0) / df_t0
+
+        balance_t = maximum(balance / df_t0 + cum_cf_t, 0)
+        balance_t_pfees = balance_t * (1 + self.default_penalty_pct) + self.default_penalty_amt
+
+        ead = maximum(balance_t_pfees, 0)
+
+        return Series(ead, index=account.remaining_life_index)
+
+
 class AmortisingExposureAtDefault:
     '''
     Amortising EAD
@@ -45,7 +77,7 @@ class AmortisingExposureAtDefault:
     Calculate the EAD using an amortisation table. This is done using the following set of equations:
 
     .. math::
-        EAD(t) = max( ( (balance(t) + arrears(t)) * (1 + DefaultPenaltyPct) + DefaultPenaltyAmt ) / OutstandingBalance, 0)
+        EAD(t) = max( (balance(t) + arrears(t)) * (1 + DefaultPenaltyPct) + DefaultPenaltyAmt, 0)
         balance(t) = max( OutstandingBalance / df(t) + ( CumulativeFees(t) - CumulativeCashflows(t) ), 0)
         CumulativeCashflows(t) = \sum_(i=0)^t (ContractualPayment \times I(IsPaymentPeriod(i)) \times (1 + PrepaymentPct) - FixedFees) \times df(i) / df(t)
         CumulativeFees(t) = \sum_(i=0)^t (( balance(i) + ContractualPayment \times I(IsPaymentPeriod(i)) ) \times FeesPct \times df(i)) / df(t)
@@ -86,12 +118,15 @@ class AmortisingExposureAtDefault:
         fees_pct_amt = cumsum((balance_t + pmt) * self.fees_pct * df_t0)/df_t0
         balance_t_pfees = maximum(balance_t + fees_pct_amt,0)
 
-        arrears_allowance = account.contractual_payment * 3
-        remaining_allowance = max(arrears_allowance - account.current_arrears, 0)
-        remaining_allowance_t = ceil(remaining_allowance / account.contractual_payment)
+        if account.contractual_payment > 0:
+            arrears_allowance = account.contractual_payment * 3
+            remaining_allowance = max(arrears_allowance - account.current_arrears, 0)
+            remaining_allowance_t = ceil(remaining_allowance / account.contractual_payment)
 
-        arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
-        arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
+            arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
+            arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
+        else:
+            arrears_t = 0
 
         ead = maximum(((balance_t_pfees + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt), 0)
 
