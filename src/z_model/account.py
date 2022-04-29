@@ -63,8 +63,9 @@ class AccountData:
 
     * contractual_payment (Double): The contractual principle and interest payment.
 
-    * contractual_freq (Integer): The number of contractual payments made per year.
-      For monthly repayments use the value 12.
+    * contractual_freq (Double): The number of contractual payments made per year.
+      For monthly repayments use the value 12. For Bullet loans that has only one payment it should be
+      12 / Remaining Life
 
     * interest_rate_type (String): The interest rate type, either `FIXED` or `FLOATING`. If the interest rate type
       is set to `FIXED` the `fixed_rate` column should be populated. If the interest rate type is set to
@@ -108,7 +109,7 @@ class AccountData:
         'limit': float,
         'current_arrears': float,
         'contractual_payment': float,
-        'contractual_freq': int,
+        'contractual_freq': float,
         'interest_rate_type': str,
         'interest_rate_freq': int,
         'fixed_rate': float,
@@ -170,7 +171,7 @@ class SimulatedAccountData(AccountData):
         'interest_rate_type': str,
         'interest_rate': float,
         'spread': float,
-        'frequency': int,
+        'frequency': float,
         'origination_rating': int,
         'ltv': float
     }
@@ -179,14 +180,16 @@ class SimulatedAccountData(AccountData):
     def from_file(cls, url: Path):
 
         def PMT(PV, i, n, FV):
-            return (PV - FV * (1 + i) ** -n) / ((1 - (1 + i) ** -n) / i)
+            return (PV - FV * (1 + i) ** -n) * (i / (1 - (1 + i) ** -n))
 
         def make_account(id, segment_id, type, term, balloon, interest_rate_type, interest_rate, spread, frequency,
                          origination_rating, ltv, origination_date, origination_amount):
 
-            if type in ('AMORTISING', 'IO'):
-                balloon = origination_amount * balloon
-                pmt = PMT(origination_amount, interest_rate / frequency, term / 12 * frequency, balloon)
+            if type.upper() in ('AMORTISING', 'IO', 'BULLET'):
+                balloon = 0 if type.upper() == 'BULLET' else origination_amount * balloon
+                interest_per_period = (1 + interest_rate / 12) ** (12 / frequency) - 1
+                number_of_payments = term / 12 * frequency
+                pmt = PMT(origination_amount, interest_per_period, number_of_payments, balloon)
             else:
                 pmt = 0
 
