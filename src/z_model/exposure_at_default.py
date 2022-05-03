@@ -57,7 +57,8 @@ class BulletExposureAtDefault:
         balance = account.outstanding_balance
         t = arange(account.remaining_life) + 1
         eir = self.effective_interest_rate[account]
-        df_t0 = 1 / cumprod(1 + eir + self.fees_pct - self.prepayment_pct)
+        eir_adjusted = (1 + eir) * (1 + self.fees_pct / 12) / (1 + self.prepayment_pct / 12) - 1
+        df_t0 = 1 / cumprod(1 + eir_adjusted)
 
         cf = repeat(self.fixed_fees, account.remaining_life)
         cum_cf_t = cumsum(cf * df_t0) / df_t0
@@ -78,16 +79,13 @@ class AmortisingExposureAtDefault:
 
     .. math::
         EAD(t) = max( (balance(t) + arrears(t)) * (1 + DefaultPenaltyPct) + DefaultPenaltyAmt, 0)
-        balance(t) = max( OutstandingBalance / df(t) + ( CumulativeFees(t) - CumulativeCashflows(t) ), 0)
-        CumulativeCashflows(t) = \sum_(i=0)^t (ContractualPayment \times I(IsPaymentPeriod(i)) \times (1 + PrepaymentPct) - FixedFees) \times df(i) / df(t)
-        CumulativeFees(t) = \sum_(i=0)^t (( balance(i) + ContractualPayment \times I(IsPaymentPeriod(i)) ) \times FeesPct \times df(i)) / df(t)
-        arrears(t) = min( CumulativeArrears(t) / df(t), RemainingAllowance)
-        CumulativeArrears(t) = \sum_(i=0)^t ContractualPayment * I(NPayments(i) <= RemainingAllowanceT) * I(IsPaymentPeriod(i)) * df(i)
-        NPayments(t) = \sum_(i=0)^t I(IsPaymentPeriod(i))
-        RemainingAllowanceT = ceil(RemainingAllowance / ContractualPayment)
+        balance(t) = max( OutstandingBalance / df(t) - CumulativeCashflows(t) , 0)
+        CumulativeCashflows(t) = \sum_(i=0)^t (ContractualPayment \times IsPaymentPeriod(i) - FixedFees) \times df(i) / df(t)
+        arrears(t) = max( min( CumulativeCashflows(t), RemainingAllowance), 0)
         RemainingAllowance = max( ContractualPayment * 3 - CurrentArrears, 0)
-        I(IsPaymentPeriod(t)) = (RemainingLife - t) % (12 / ContractualFreq) == 0
-
+        IsPaymentPeriod(t) = ((RemainingLife - t) % (12 / ContractualFreq) == 0) & IsNotInPaymentHoliday(t)
+        df(t) = 1 / \product_(i=0)^t (1 + EIR^A(i))
+        EIR^A(t) = (1 + EIR(t)) * (1 + FeesPct / 12) / (1 + PrePaymentPct / 12) - 1
 
     '''
     def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):
@@ -102,33 +100,22 @@ class AmortisingExposureAtDefault:
         balance = account.outstanding_balance
         t = arange(account.remaining_life) + 1
         eir = self.effective_interest_rate[account]
-        df_t0 = 1 / cumprod(1 + eir)
+        eir_adjusted = (1 + eir) * (1 + self.fees_pct / 12) / (1 + self.prepayment_pct / 12) - 1
+        df_t0 = 1 / cumprod(1 + eir_adjusted)
 
         is_not_in_payment_holiday = 1 if isnull(account.payment_holiday_end_date) else (account.remaining_life_index >= account.payment_holiday_end_date)
         is_pmt_period = ((account.remaining_life - t) % (12 / account.contractual_freq) == 0) * is_not_in_payment_holiday
-        n_pmts = cumsum(is_pmt_period)
 
         pmt = account.contractual_payment * is_pmt_period
-        cf = pmt * (1 + self.prepayment_pct) - self.fixed_fees
+        cf = pmt - self.fixed_fees
         cf_t0 = cf * df_t0
         cum_cf_t = cumsum(cf_t0) / df_t0
 
-        balance_t = balance / df_t0 - cum_cf_t
-        # Fees are charged before payment is deducted
-        fees_pct_amt = cumsum((balance_t + pmt) * self.fees_pct * df_t0)/df_t0
-        balance_t_pfees = maximum(balance_t + fees_pct_amt,0)
+        balance_t = maximum(balance / df_t0 - cum_cf_t, 0)
+        remaining_allowance = max(account.contractual_payment * 3 - account.current_arrears, 0)
+        arrears_t = maximum(minimum(cum_cf_t, remaining_allowance), 0)
 
-        if account.contractual_payment > 0:
-            arrears_allowance = account.contractual_payment * 3
-            remaining_allowance = max(arrears_allowance - account.current_arrears, 0)
-            remaining_allowance_t = ceil(remaining_allowance / account.contractual_payment)
-
-            arrears_t0 = account.contractual_payment * (n_pmts <= remaining_allowance_t) * is_pmt_period * df_t0
-            arrears_t = minimum(cumsum(arrears_t0) / df_t0, remaining_allowance)
-        else:
-            arrears_t = 0
-
-        ead = maximum(((balance_t_pfees + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt), 0)
+        ead = maximum((balance_t + arrears_t) * (1 + self.default_penalty_pct) + self.default_penalty_amt, 0)
 
         return Series(ead, index=account.remaining_life_index)
 
@@ -139,9 +126,9 @@ class CCFExposureAtDefault:
 
     Calculate EAD using one of the CCF methods:
 
-    * ``METHOD-1``: EAD(t) = CCF
-    * ``METHOD-2``: EAD(t) = AccountLimit * CCF / OutstandingBalancce
-    * ``METHOD-3``: EAD(t) = (OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF) / OutstandingBalancce
+    * ``METHOD-1``: EAD(t) = OutstandingBalance * CCF
+    * ``METHOD-2``: EAD(t) = AccountLimit * CCF
+    * ``METHOD-3``: EAD(t) = OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF
 
     '''
     def __init__(self, ccf_method: str, ccf: float, **kwargs):
