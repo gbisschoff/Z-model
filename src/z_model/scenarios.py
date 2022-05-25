@@ -160,6 +160,7 @@ class Scenarios:
                 the nominal space.
 
         """
+        # Dictionary of valid transformation that could be applied to the differential equation
         FUN = {
             'EXPONENTIAL': exp
         }

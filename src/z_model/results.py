@@ -38,16 +38,19 @@ class Results:
         '''
         df = self.data[[*by, 'EAD(t)', 'P(S=1)', 'P(S=2)', 'P(S=3)', 'P(S=WO)', 'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)']].copy()
 
+        # Calculate the stage conditional exposure
         df['Exposure(t)_1'] = df['EAD(t)'] * df['P(S=1)']
         df['Exposure(t)_2'] = df['EAD(t)'] * df['P(S=2)']
         df['Exposure(t)_3'] = df['EAD(t)'] * df['P(S=3)']
         df['Exposure(t)_wo'] = df['EAD(t)'] * df['P(S=WO)']
 
+        # Calculate the stage conditional ECL (note that WO=Exposure)
         df['ECL(t)_1'] = df['STAGE1(t)'] * df['P(S=1)']
         df['ECL(t)_2'] = df['STAGE2(t)'] * df['P(S=2)']
         df['ECL(t)_3'] = df['STAGE3(t)'] * df['P(S=3)']
         df['ECL(t)_wo'] = df['Exposure(t)_wo']
 
+        # Summarise the data to calculate the expected number of accounts, expected exposure an expected ECL in each stage
         rs = (
             df
             .groupby(by=by)
@@ -87,9 +90,9 @@ class Results:
 
         '''
         df = self.data[[*by, 'P(S=1)', 'P(S=2)', 'P(S=3)', 'Exposure(t)', '12mPD(t)', 'LGD(t)']].copy()
-        df['N'] = (df['P(S=1)'] + df['P(S=2)'] + df['P(S=3)'])
-        df['EPD'] = df['Exposure(t)'] * df['12mPD(t)']
-        df['ELGD'] = df['Exposure(t)'] * df['LGD(t)']
+        df['N'] = (df['P(S=1)'] + df['P(S=2)'] + df['P(S=3)']) # Calculate the expected number of observations
+        df['EPD'] = df['Exposure(t)'] * df['12mPD(t)'] # Calculate the exposure weighted PD
+        df['ELGD'] = df['Exposure(t)'] * df['LGD(t)'] # Calculate the exposure weighted LGD
 
         rs = (
             df

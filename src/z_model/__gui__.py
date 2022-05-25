@@ -82,7 +82,9 @@ def main():
                 if event == sg.WIN_CLOSED or event == 'Exit':
                     break
                 elif event == 'Submit':
-                    if values['-ACCOUNT_DATA-'] != '' and values['-ASSUMPTIONS-'] != '' and values['-SCENARIOS-'] != '' and values['-RESULTS-'] != '':
+                    if values['-ACCOUNT_DATA-'] == '' and values['-ASSUMPTIONS-'] == '' and values['-SCENARIOS-'] == '' and values['-RESULTS-'] == '':
+                        sg.popup_ok(f'Not all required inputs were provided. Please provide required inputs and try again.', title='Z-Model', icon=icon)
+                    else:
                         sg.popup_quick('The model is running and might take some time to compete and appear to be frozen. Please be patient.', title='Z-Model', icon=icon)
                         window['progressbar'].update_bar(20)
                         run(

@@ -42,7 +42,14 @@ class BulletExposureAtDefault:
     '''
     Bullet EAD
 
-    Calculate the EAD using an interest rate calculation method.
+    Calculate the EAD using an interest rate calculation method. This is done using the following set of equations:
+
+    .. math::
+        EAD(t) = max( balance(t) * (1 + DefaultPenaltyPct) + DefaultPenaltyAmt, 0)
+        balance(t) = max( OutstandingBalance / df(t) - CumulativeCashflows(t) , 0)
+        CumulativeCashflows(t) = \sum_(i=0)^t FixedFees \times df(i) / df(t)
+        df(t) = 1 / \product_(i=0)^t (1 + EIR^A(i))
+        EIR^A(t) = (1 + EIR(t)) * (1 + FeesPct / 12) / (1 + PrePaymentPct / 12) - 1
 
     '''
     def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):

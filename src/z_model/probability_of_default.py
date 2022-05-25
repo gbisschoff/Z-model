@@ -90,14 +90,17 @@ class TransitionMatrixProbabilityOfDefault:
         self.default_state = transition_matrix.default_state
 
     def __getitem__(self, account: Account):
+        # Calculate the probability of being in each risk grade excl. default (Survival probability)
         s = stack(
             self.transition_matrix.get_cumulative(
                 account.remaining_life_index,
                 return_list=True
             )
         )[:, account.current_rating, :self.default_state]
+        # Calculate the 1m transition to default probability
         h = stack(self.transition_matrix[account.remaining_life_index])[:, :self.default_state, self.default_state]
 
+        # Return the marginal probability of default
         return Series(sum(s * h, axis=1), index=account.remaining_life_index)
 
 

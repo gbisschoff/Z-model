@@ -33,27 +33,21 @@ class PDAssumptions:
 
             PiT = \Phi \left(\frac{TtC - Z\times\sqrt{\rho}}{\sqrt{1-\rho}}\right)
 
-        if ``True`` a calibration factor (``d``) is added to ``Z`` so that the PiT PD equals the TtC PD if Z is zero,
+        if ``True`` a the expected value formula is used so that the PiT PD equals the TtC PD if Z is zero,
         i.e.:
 
         .. math::
 
-            PiT = \Phi\left(\frac{TtC - (Z+d)\times\sqrt{\rho}}{\sqrt{1-\rho}}\right)
+            PiT = \Phi(TtC - Z \times \sqrt{\rho})
 
-        this results in the following formula:
 
-        .. math::
-
-            PiT = \Phi\left(TtC - Z \times \frac{\sqrt{\rho}}{\sqrt{1-\rho}}\right)
-
-    :param default_state: The default state on the transition matrix. If it is the last column it should be -1,
+    :param cure_state: The state on the transition matrix in which accounts cure to. If it is the last column it should be -1,
         if it is the second last column it should be ``-2``.
     :param frequency: The frequency of the transition matrix. By default it should be a 12m transition matrix (``12``).
     :param time_in_watchlist: The number of months an account needs to remain in the watchlist.
         This only has an effect on the stress testing model which does stage forecasting.
     :param transition_matrix The transition matrix used to calculate PDs and stage probabilities. It should be a NxN
-        matrix and have an Attrition (A) as the first column in the matrix as well as a Write-off (WO) state as the
-        last state. If those states should have no effect on the model make the diagonal 100%.
+        matrix and have an Attrition (A) as the first column in the matrix. If those states should have no effect on the model make the diagonal 100%.
     :param method: What Z-model methodology should be used to calculate the FiT transiton matrixes. Valid values are
         ``METHOD-1`` and ``METHOD-2``. See :class:`TransitionMatrix` for more details.
 

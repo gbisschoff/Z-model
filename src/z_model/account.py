@@ -151,7 +151,7 @@ class AccountData:
             The account data should contain the columns as specified by the `DICTIONARY` attribute.
             The function support file formats as specified by the `file_reader` module.
         """
-        data = read_file(url=url, dtype=cls.DICTIONARY, index_col='contract_id')
+        data = read_file(url=url, sheet_name='DATA', dtype=cls.DICTIONARY, index_col='contract_id')
         data['account_type'] = 'Actual'
         return cls(data=data)
 
@@ -217,7 +217,7 @@ class SimulatedAccountData(AccountData):
                 'watchlist': NA
             }
 
-        data = read_file(url, dtype=cls.DICTIONARY, sheet_name='ASSUMPTIONS')
+        data = read_file(url, dtype=cls.DICTIONARY, sheet_name='DATA')
         id_vars = [c for c in data.columns if isinstance(c, str)]
         keep_cols = ['id', *cls.DICTIONARY.keys(), 'origination_date', 'origination_amount']
         data = (

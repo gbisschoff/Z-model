@@ -19,7 +19,11 @@ app = typer.Typer()
 try:
     license = License.load(Path().home() / '.z_model_license')
 except Exception as e:
-    logger.error(f'User license error. Please check that the user license is saved at the correct location. \n{e}')
+    logger.error(
+        f"User license error. Please check that the user license is saved at the correct location.\n"
+        f"The software expects the license file to be named and located in (Windows) C:/Users/%USERNAME%/.z_model_license\n"
+        f"{e}"
+    )
 
 @app.command()
 def about():
