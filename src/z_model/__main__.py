@@ -1,6 +1,6 @@
 import typer
 import multiprocessing
-from typing import Optional
+from typing import Optional, List
 from pathlib import Path
 from datetime import datetime
 
@@ -24,6 +24,7 @@ except Exception as e:
         f"The software expects the license file to be named and located in (Windows) C:/Users/%USERNAME%/.z_model_license\n"
         f"{e}"
     )
+
 
 @app.command()
 def about():
@@ -85,6 +86,7 @@ def run(
         assumptions: Path,
         scenarios: Path,
         outfile: Path,
+        by: Optional[List[str]] = ('segment_id', ),
         portfolio_assumptions: Optional[Path] = None,
         method: Methods = Methods.Map
 ):
@@ -113,7 +115,11 @@ def run(
             thread_map: executes the scenarios in a threaded manner, but not all computers support parallel
             processing.
 
-    :param verbose: a flag spefifying if debugging should be enabled.
+    :param by: a field in the data to summarise by. Multiple `--by` arguments may be passed.
+
+    :param portfolio_assumptions: the path to the portfolio assumptions input file. This file contains data about
+        the forecast portfolio and is used to generate simulated accounts matching the characteristics. The type of
+        account can be accessed via the `account_type` variable (this can be passed in a `--by` statement).
 
     '''
     try:
@@ -146,14 +152,16 @@ def run(
                 scenarios=scenarios
             )
 
-            logger.info(f'Saving results ({outfile=}).')
-            results.save(outfile)
+            logger.info(f'Saving results ({outfile=}) ({by=}).')
+            by = [*by, 'forecast_reporting_date', 'scenario']
+            results.save(outfile, by=by)
 
             logger.info("Done.")
 
     except Exception as e:
         logger.error(e)
         raise Exception(e)
+
 
 @app.command(hidden=True)
 def create_license(
@@ -191,6 +199,7 @@ def create_license(
         logger.error(e)
         raise Exception(e)
 
+
 @app.command()
 def gui():
     '''
@@ -198,6 +207,7 @@ def gui():
     '''
     from z_model.__gui__ import main
     main()
+
 
 @app.callback(invoke_without_command=True)
 def default(ctx: typer.Context):
@@ -207,9 +217,11 @@ def default(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
         gui()
 
+
 def main():
     multiprocessing.freeze_support()
     app()
+
 
 if __name__ == "__main__":
     main()

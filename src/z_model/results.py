@@ -4,6 +4,7 @@ from pandas import DataFrame
 from numpy import sum
 from .file_reader import guess_extension
 
+
 class Results:
     '''
     Z-Model Results class
@@ -28,12 +29,12 @@ class Results:
         rs.drop(columns=['T', 'forecast_reporting_date', 'PD(t)', 'DF(t)', 'Marginal CR(t)', 'Write-off(t)'], inplace=True)
         return rs
 
-
-    def summarise(self, by=['account_type', 'segment_id', 'forecast_reporting_date', 'scenario']):
+    def summarise(self, by=('account_type', 'segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs):
         '''
         Summarise the ECL results.
 
         :param by: a list of columns to summarise by. (Default: ``['account_type', 'segment_id', 'scenario', 'forecast_reporting_date']``)
+        :param args, kwargs: Not currently used
 
         '''
         df = self.data[[*by, 'EAD(t)', 'P(S=1)', 'P(S=2)', 'P(S=3)', 'P(S=WO)', 'STAGE1(t)', 'STAGE2(t)', 'STAGE3(t)']].copy()
@@ -53,7 +54,7 @@ class Results:
         # Summarise the data to calculate the expected number of accounts, expected exposure an expected ECL in each stage
         rs = (
             df
-            .groupby(by=by)
+            .groupby(by=list(by))
             .aggregate(
                 n_1=('P(S=1)', sum),
                 n_2=('P(S=2)', sum),
@@ -69,7 +70,7 @@ class Results:
                 ecl_wo=('ECL(t)_wo', sum),
             )
             .reset_index()
-            .melt(id_vars=by)
+            .melt(id_vars=list(by))
         )
 
         var_split = rs['variable'].str.split('_', n=1, expand=True)
@@ -82,11 +83,12 @@ class Results:
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'ecl': 'ECL(t)', 'cr': 'CR(t)'}, inplace=True)
         return rs[[*by, 'stage', '#', 'Exposure(t)', 'ECL(t)', 'CR(t)']]
 
-    def parameters(self, by=['segment_id', 'forecast_reporting_date', 'scenario']):
+    def parameters(self, by=('segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs):
         '''
         Summarise the parameters.
 
         :param by: a list of columns to summarise by. (Default: ``['segment_id', 'scenario', 'forecast_reporting_date']``)
+        :param args, kwargs: Not currently used
 
         '''
         df = self.data[[*by, 'P(S=1)', 'P(S=2)', 'P(S=3)', 'Exposure(t)', '12mPD(t)', 'LGD(t)']].copy()
@@ -96,7 +98,7 @@ class Results:
 
         rs = (
             df
-            .groupby(by=by)
+            .groupby(by=list(by))
             .aggregate(
                 n=('N', sum),
                 exposure=('Exposure(t)', sum),
@@ -111,18 +113,20 @@ class Results:
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'epd': '12mPD(t)', 'elgd': 'LGD(t)'}, inplace=True)
         return rs[[*by, '#', 'Exposure(t)', '12mPD(t)', 'LGD(t)']]
 
-    def save(self, url: Path):
+    def save(self, url: Path, *args, **kwargs):
         '''
         Save the results and reports to a zip archive.
 
         :param url: the path to a Zip archive.
+        :param args: arguments passes to summarise & parameters
+        :param kwargs: arguments passes to summarise & parameters
 
         '''
         if guess_extension(url) != '.zip':
             raise ValueError(f'The file path {url} is not a .zip file.')
 
         with ZipFile(url, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
-            zf.writestr("detailed-result.csv", self.data.to_csv(index=False))
-            zf.writestr("reporting-date-result.csv", self.reporting_rate_results().to_csv(index=False))
-            zf.writestr("summary.csv", self.summarise().to_csv(index=False))
-            zf.writestr("parameters.csv", self.parameters().to_csv(index=False))
+            self.data.to_csv(zf.open('detailed-results.csv', 'w'), index=False)
+            self.reporting_rate_results().to_csv(zf.open('reporting-date-results.csv', 'w'), index=False)
+            self.summarise(*args, **kwargs).to_csv(zf.open('summary.csv', 'w'), index=False)
+            self.parameters(*args, **kwargs).to_csv(zf.open('parameters.csv', 'w'), index=False)
