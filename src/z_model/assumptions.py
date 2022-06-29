@@ -1,4 +1,4 @@
-'''
+"""
 This module contains all the assumptions used by the ECL model. The assumptions are split by:
 
 * :class:`PDAssumptions`: contains the PD model assumption
@@ -10,14 +10,17 @@ This module contains all the assumptions used by the ECL model. The assumptions 
 These are all rolled up into a single :class:`Assumptions` class that contains all the model assumptions for each
 segment as a dictionary.
 
-'''
+"""
 from numpy import array
 from pandas import read_excel
 from pathlib import Path
+from dataclasses import dataclass
 from .stage_map import StageMap
 
+
+@dataclass()
 class PDAssumptions:
-    r'''
+    r"""
     PD Assumptions
 
     The PD model has the following configurable assumptions:
@@ -51,21 +54,21 @@ class PDAssumptions:
     :param method: What Z-model methodology should be used to calculate the FiT transiton matrixes. Valid values are
         ``METHOD-1`` and ``METHOD-2``. See :class:`TransitionMatrix` for more details.
 
-    '''
-    def __init__(self, type: str, z_index: str, rho: float, calibrated: bool, cure_state: int, frequency: int, time_in_watchlist: int, transition_matrix: array, method:str):
-        self.type = type
-        self.z_index = z_index
-        self.rho = rho
-        self.calibrated = calibrated
-        self.cure_state = cure_state
-        self.frequency = frequency
-        self.time_in_watchlist = time_in_watchlist
-        self.transition_matrix = transition_matrix
-        self.method = method
+    """
+    type: str
+    z_index: str
+    rho: float
+    calibrated: bool
+    cure_state: int
+    frequency: int
+    time_in_watchlist: int
+    transition_matrix: array
+    method: str
 
 
+@dataclass()
 class LGDAssumptions:
-    '''
+    """
     LGD Assumptions
 
     The LGD model has the following configurable assumptions:
@@ -99,23 +102,23 @@ class LGDAssumptions:
         of increases in the collateral value, representing the tail risk. Used by the ``CONSTANT-GROWTH`` and
         ``SECURED`` LGD model.
 
-    '''
-    def __init__(self, type:str, loss_given_default:float, growth_rate:float, index:str, probability_of_cure:float, loss_given_cure:float, forced_sale_discount:float, sale_cost:float, time_to_sale:int, loss_given_write_off:float, floor:float):
-        self.type = type
-        self.loss_given_default = loss_given_default
-        self.growth_rate = growth_rate
-        self.index = index
-        self.probability_of_cure = probability_of_cure
-        self.loss_given_cure = loss_given_cure
-        self.forced_sale_discount = forced_sale_discount
-        self.sale_cost = sale_cost
-        self.time_to_sale = time_to_sale
-        self.loss_given_write_off = loss_given_write_off
-        self.floor = floor
+    """
+    type: str
+    loss_given_default: float
+    growth_rate: float
+    index: str
+    probability_of_cure: float
+    loss_given_cure: float
+    forced_sale_discount: float
+    sale_cost: float
+    time_to_sale: int
+    loss_given_write_off: float
+    floor: float
 
 
+@dataclass()
 class EADAssumptions:
-    '''
+    """
     EAD Assumptions
 
     The EAD model has the following configurable assumptions:
@@ -154,33 +157,33 @@ class EADAssumptions:
         a percentage of the contractual payment, i.e. 10% implies on average obligors pay
         ``contractual_pmt * (1 + 10%)``
 
-    '''
-    def __init__(self, type: str, exposure_at_default:float, ccf_method:str, ccf:str, fees_fixed:float, fees_pct:float, prepayment_pct:float, default_penalty_pct:float, default_penalty_amt:float):
-        self.type = type
-        self.exposure_at_default = exposure_at_default
-        self.ccf_method = ccf_method
-        self.ccf = ccf
-        self.fees_fixed = fees_fixed
-        self.fees_pct = fees_pct
-        self.prepayment_pct = prepayment_pct
-        self.default_penalty_pct = default_penalty_pct
-        self.default_penalty_amt = default_penalty_amt
+    """
+    type: str
+    exposure_at_default: float
+    ccf_method: str
+    ccf: float
+    fees_fixed: float
+    fees_pct: float
+    prepayment_pct: float
+    default_penalty_pct: float
+    default_penalty_amt: float
 
 
+@dataclass()
 class EIRAssumptions:
-    '''
+    """
     EIR Assumptions
 
     The EIR model has the following configurable assumptions:
 
     :param base_rate: The base rate index name to look up from the :class:`Scenarios`.
-    '''
-    def __init__(self, base_rate:str):
-        self.base_rate = base_rate
+    """
+    base_rate: str
 
 
+@dataclass()
 class SegmentAssumptions:
-    '''
+    """
     Segement Assumptions:
 
     :class:`SegmentAssumptions` is a container to store all model assumptions associated with a specific segment.
@@ -203,15 +206,14 @@ class SegmentAssumptions:
     :param stage_map: An :class:`StageMap` object containing the IFRS9 staging rules.
 
 
-    '''
-    def __init__(self, id: int, name:str, pd: PDAssumptions, ead:EADAssumptions, lgd:LGDAssumptions, eir:EIRAssumptions, stage_map: StageMap):
-        self.id = id
-        self.name = name
-        self.pd = pd
-        self.ead = ead
-        self.lgd = lgd
-        self.eir = eir
-        self.stage_map = stage_map
+    """
+    id: int
+    name: str
+    pd: PDAssumptions
+    ead: EADAssumptions
+    lgd: LGDAssumptions
+    eir: EIRAssumptions
+    stage_map: StageMap
 
     def __repr__(self):
         return f'SegmentAssumptions(id={self.id}, name={self.name})'
@@ -300,39 +302,39 @@ class Assumptions(dict):
                 id=segment_id,
                 name=d['segment_name'],
                 pd=PDAssumptions(
-                    type = d['pd_type'],
-                    method = d['pd_method'],
-                    z_index = d['pd_z_index'],
-                    rho = d['pd_rho'],
-                    calibrated = d['pd_calibrated'],
-                    cure_state = d['pd_cure_state'],
-                    frequency = d['pd_frequency'],
-                    time_in_watchlist = d['pd_time_in_watchlist'],
-                    transition_matrix = array(transition_matrices.drop(columns='from').loc[segment_id]),
+                    type=d['pd_type'],
+                    method=d['pd_method'],
+                    z_index=d['pd_z_index'],
+                    rho=d['pd_rho'],
+                    calibrated=d['pd_calibrated'],
+                    cure_state=d['pd_cure_state'],
+                    frequency=d['pd_frequency'],
+                    time_in_watchlist=d['pd_time_in_watchlist'],
+                    transition_matrix=array(transition_matrices.drop(columns='from').loc[segment_id]),
                 ),
                 ead=EADAssumptions(
-                    type = d['ead_type'],
-                    exposure_at_default = d['ead_exposure_at_default'],
-                    ccf_method = d['ead_ccf_method'],
-                    ccf = d['ead_ccf'],
-                    fees_fixed = d['ead_fees_fixed'],
-                    fees_pct = d['ead_fees_pct'],
-                    prepayment_pct = d['ead_prepayment_pct'],
-                    default_penalty_pct = d['ead_default_penalty_pct'],
+                    type=d['ead_type'],
+                    exposure_at_default=d['ead_exposure_at_default'],
+                    ccf_method=d['ead_ccf_method'],
+                    ccf=d['ead_ccf'],
+                    fees_fixed=d['ead_fees_fixed'],
+                    fees_pct=d['ead_fees_pct'],
+                    prepayment_pct=d['ead_prepayment_pct'],
+                    default_penalty_pct=d['ead_default_penalty_pct'],
                     default_penalty_amt=d['ead_default_penalty_amt']
                 ),
                 lgd=LGDAssumptions(
-                    type = d['lgd_type'],
-                    loss_given_default = d['lgd_loss_given_default'],
-                    growth_rate = d['lgd_growth_rate'],
-                    index = d['lgd_index'],
-                    probability_of_cure = d['lgd_probability_of_cure'],
-                    loss_given_cure = d['lgd_loss_given_cure'],
-                    forced_sale_discount = d['lgd_forced_sale_discount'],
-                    sale_cost = d['lgd_sale_cost'],
-                    time_to_sale = d['lgd_time_to_sale'],
-                    loss_given_write_off = d['lgd_loss_given_write_off'],
-                    floor = d['lgd_floor']
+                    type=d['lgd_type'],
+                    loss_given_default=d['lgd_loss_given_default'],
+                    growth_rate=d['lgd_growth_rate'],
+                    index=d['lgd_index'],
+                    probability_of_cure=d['lgd_probability_of_cure'],
+                    loss_given_cure=d['lgd_loss_given_cure'],
+                    forced_sale_discount=d['lgd_forced_sale_discount'],
+                    sale_cost=d['lgd_sale_cost'],
+                    time_to_sale=d['lgd_time_to_sale'],
+                    loss_given_write_off=d['lgd_loss_given_write_off'],
+                    floor=d['lgd_floor']
                 ),
                 eir=EIRAssumptions(
                     base_rate=d['eir_base_rate']
