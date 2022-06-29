@@ -8,15 +8,16 @@ import rsa
 from rsa.pkcs1 import VerificationError
 
 from .cryptography import PublicKey, PrivateKey
-from .logging import logger
+from z_model.logging import logging, setup_logging
 
+setup_logging()
 HASH_METHOD = 'SHA-1'
 
 try:
     verify_key_path = (Path.cwd() / __file__).with_name('data') / 'verify.key'
     VERIFY_KEY = PublicKey.load(verify_key_path)
 except Exception as e:
-    logger.error(e)
+    logging.error(e)
 
 
 class License():
@@ -26,7 +27,7 @@ class License():
 
     def is_valid(self):
         try:
-            logger.info(f'Checking user license. {self.information=} {self.signature=}')
+            logging.info(f'Checking user license. {self.information=} {self.signature=}')
             expiration_date_str = self.information.get('expiration_date', None)
             if expiration_date_str:
                 expiration_date = date.fromisoformat(expiration_date_str)
@@ -35,12 +36,12 @@ class License():
 
                 time_remaining = (expiration_date - date.today())
                 if time_remaining.days <= 30:
-                    logger.warning(f'The license expires in {time_remaining.days} days on {expiration_date}.')
+                    logging.warning(f'The license expires in {time_remaining.days} days on {expiration_date}.')
 
             msg = json.dumps(self.information).encode()
             is_valid = rsa.verify(msg, b64decode(self.signature.encode()), VERIFY_KEY) == HASH_METHOD
         except Exception as e:
-            logger.error(e)
+            logging.error(e)
             is_valid = False
 
         return is_valid

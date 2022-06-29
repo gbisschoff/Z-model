@@ -5,21 +5,22 @@ from pathlib import Path
 from datetime import datetime
 
 from z_model import __version__
-from z_model.logging import logger, logfile
 from z_model.exeutor import Methods
 from z_model.license import License
+from z_model.logging import logging, setup_logging
 
+setup_logging()
 __author__ = "Geyer Bisschoff"
 __copyright__ = "Deloitte LLP"
 __license__ = "Proprietary Software License"
 
-logger.info(f'Logging setup. Saving too {logfile=}')
+logging.info(f'Logging setup.')
 app = typer.Typer()
 
 try:
     license = License.load(Path().home() / '.z_model_license')
 except Exception as e:
-    logger.error(
+    logging.error(
         f"User license error. Please check that the user license is saved at the correct location.\n"
         f"The software expects the license file to be named and located in (Windows) C:/Users/%USERNAME%/.z_model_license\n"
         f"{e}"
@@ -69,14 +70,14 @@ def generate_scenarios(
             from z_model.scenarios import Scenarios
             from z_model.file_reader import write_file
 
-            logger.info(f'Generating scenarios from monte-carlo assumptions ({assumptions=}).')
+            logging.info(f'Generating scenarios from monte-carlo assumptions ({assumptions=}).')
             scenarios = Scenarios.from_assumptions(url=assumptions)
-            logger.info(f'Saving monte-carlo scenarios ({outfile=}).')
+            logging.info(f'Saving monte-carlo scenarios ({outfile=}).')
             scenarios.to_file(url=outfile)
-            logger.info("Done.")
+            logging.info("Done.")
 
     except Exception as e:
-        logger.error(e)
+        logging.error(e)
         raise Exception(e)
 
 
@@ -130,36 +131,36 @@ def run(
             from z_model.exeutor import Executor
             from z_model.file_reader import write_file
 
-            logger.info(f'Loading assumptions ({assumptions=}).')
+            logging.info(f'Loading assumptions ({assumptions=}).')
             assumptions = Assumptions.from_file(url=assumptions)
 
-            logger.info(f'Loading macroeconomic scenarios ({scenarios=}).')
+            logging.info(f'Loading macroeconomic scenarios ({scenarios=}).')
             scenarios = Scenarios.from_file(url=scenarios)
 
-            logger.info(f'Loading account level data ({account_data=}).')
+            logging.info(f'Loading account level data ({account_data=}).')
             account_data = AccountData.from_file(url=account_data)
 
             if portfolio_assumptions:
-                logger.info(f'Loading business assumptions ({portfolio_assumptions=}).')
+                logging.info(f'Loading business assumptions ({portfolio_assumptions=}).')
                 simulated_data = SimulatedAccountData.from_file(portfolio_assumptions)
-                logger.info(f'Combining simulated accounts with actual accounts.')
+                logging.info(f'Combining simulated accounts with actual accounts.')
                 account_data = account_data + simulated_data
 
-            logger.info('Starting calculations.')
+            logging.info('Starting calculations.')
             results = Executor(method=method).execute(
                 account_data=account_data,
                 assumptions=assumptions,
                 scenarios=scenarios
             )
 
-            logger.info(f'Saving results ({outfile=}) ({by=}).')
+            logging.info(f'Saving results ({outfile=}) ({by=}).')
             by = [*by, 'forecast_reporting_date', 'scenario']
             results.save(outfile, by=by)
 
-            logger.info("Done.")
+            logging.info("Done.")
 
     except Exception as e:
-        logger.error(e)
+        logging.error(e)
         raise Exception(e)
 
 
@@ -189,14 +190,14 @@ def create_license(
     try:
         from z_model.cryptography import PrivateKey
         from z_model.license import create_license
-        logger.info(f'Loading sign-key. ({sign_key=})')
+        logging.info(f'Loading sign-key. ({sign_key=})')
         sign_key = PrivateKey.load(sign_key)
-        logger.info(f'Creating license. ({company_name=}, {email=}, {expiration_date=})')
+        logging.info(f'Creating license. ({company_name=}, {email=}, {expiration_date=})')
         l = create_license(company_name, email, expiration_date.strftime(format='%Y-%m-%d'), sign_key)
-        logger.info(f'Saving license. {outfile=}')
+        logging.info(f'Saving license. {outfile=}')
         l.save(outfile)
     except Exception as e:
-        logger.error(e)
+        logging.error(e)
         raise Exception(e)
 
 

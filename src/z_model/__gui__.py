@@ -2,11 +2,11 @@ from pathlib import Path
 import PySimpleGUI as sg
 from time import sleep
 from rsa.pkcs1 import VerificationError
-from z_model.logging import logger, logfile
+from z_model.logging import logging, setup_logging
 from z_model.__main__ import run, __copyright__, __version__, license
 from z_model.exeutor import Methods
 
-
+setup_logging()
 logo = (Path.cwd() / __file__).with_name('data') / 'deloitte.png'
 icon = (Path.cwd() / __file__).with_name('data') / 'icon.ico'
 license_message = f'{license.information.get("company_name")}, Expiration date: {license.information.get("expiration_date")}'
@@ -75,10 +75,10 @@ window = sg.Window(
 def main():
     try:
         if license.is_valid():
-            logger.info('Starting Z-model GUI.')
+            logging.info('Starting Z-model GUI.')
             while True:
                 event, values = window.read()
-                logger.debug(f'GUI {event=}, {values=}')
+                logging.debug(f'GUI {event=}, {values=}')
                 if event == sg.WIN_CLOSED or event == 'Exit':
                     break
                 elif event == 'Submit':
@@ -113,7 +113,7 @@ def main():
                 icon=sg.SYSTEM_TRAY_MESSAGE_ICON_WARNING
             )
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logging.error(e, exc_info=True)
         sg.popup_ok(
             f"ERROR 500\n\n"
             f"{str(e)}\n\n"
