@@ -8,20 +8,21 @@ from .scenarios import Scenarios
 from .results import Results
 from .ecl_model import ECLModel
 
+
 class Methods(str, Enum):
-    '''
+    """
     Methods
 
     Specifies different execution methods:
 
     * ``MAP``: One scenario at a time. This takes the longest to run, but is typically the most robust. This method
         has to be used if the model is executed in an interactive session.
-    * ``THREAD_MAP``: Each scenario is exectued in its own thread. It only provides an increase in performance for IO
+    * ``THREAD_MAP``: Each scenario is executed in its own thread. It only provides an increase in performance for IO
         bound operations.
-    * ``PROCESS_MAP``: Each scenario is executed in paralelle in its own worker. This provide true paralelle processing.
+    * ``PROCESS_MAP``: Each scenario is executed in parallel in its own worker. This provides true parallel processing.
         This only works in non-interactive sessions, i.e. via the terminal.
 
-    '''
+    """
     Map = 'map'
     ProgressMap = 'process_map'
     ThreadMap = 'thread_map'
@@ -35,24 +36,24 @@ class Methods(str, Enum):
 
 
 class Executor:
-    '''
+    """
     Executor
 
-    A class used to setup and execute multiple economic scenarios. Uses :class:`Methods` to specify the execution
+    A class used to set up and execute multiple economic scenarios. Uses :class:`Methods` to specify the execution
     method.
 
-    '''
+    """
 
     def __init__(self, method: Methods = Methods.Map):
         self.method = method
 
     @staticmethod
     def _run_scenario(args):
-        '''
+        """
         Execute a single macroeconomic scenario
 
         :param args: Tuple(name, scenario, assumptions, account_data)
-        '''
+        """
         name, scenario, assumptions, account_data = args
         ecl_models = {
             segment_id: ECLModel.from_assumptions(
