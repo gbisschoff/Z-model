@@ -1,4 +1,4 @@
-'''
+"""
 Exposure at Default (EAD)
 
 This module contains the different EAD models available.
@@ -13,7 +13,7 @@ The ``Exposure`` of an account is calculated as;
 .. math::
     Exposure(t) = OutstandingBalance_(t0) \times EAD(t)
 
-'''
+"""
 from numpy import array, repeat, arange, cumprod, cumsum, maximum, minimum, ceil
 from pandas import Series, isnull
 from .account import Account
@@ -21,8 +21,9 @@ from .effective_interest_rate import EffectiveInterestRate
 from .assumptions import EADAssumptions
 from .scenarios import Scenario
 
+
 class ConstantExposureAtDefault:
-    '''
+    """
     Constant EAD
 
     Set the EAD to a constant value over time, i.e.:
@@ -30,7 +31,7 @@ class ConstantExposureAtDefault:
     .. math::
        EAD(t) = ExposureAtDefault
 
-    '''
+    """
     def __init__(self, exposure_at_default: float):
         self.exposure_at_default = exposure_at_default
 
@@ -39,7 +40,7 @@ class ConstantExposureAtDefault:
 
 
 class BulletExposureAtDefault:
-    '''
+    """
     Bullet EAD
 
     Calculate the EAD using an interest rate calculation method. This is done using the following set of equations:
@@ -51,7 +52,7 @@ class BulletExposureAtDefault:
         df(t) = 1 / \product_(i=0)^t (1 + EIR^A(i))
         EIR^A(t) = (1 + EIR(t)) * (1 + FeesPct / 12) / (1 + PrePaymentPct / 12) - 1
 
-    '''
+    """
     def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):
         self.effective_interest_rate = effective_interest_rate
         self.fixed_fees = fixed_fees
@@ -79,7 +80,7 @@ class BulletExposureAtDefault:
 
 
 class AmortisingExposureAtDefault:
-    '''
+    """
     Amortising EAD
 
     Calculate the EAD using an amortisation table. This is done using the following set of equations:
@@ -94,7 +95,7 @@ class AmortisingExposureAtDefault:
         df(t) = 1 / \product_(i=0)^t (1 + EIR^A(i))
         EIR^A(t) = (1 + EIR(t)) * (1 + FeesPct / 12) / (1 + PrePaymentPct / 12) - 1
 
-    '''
+    """
     def __init__(self, effective_interest_rate: EffectiveInterestRate, fixed_fees: float = .0, fees_pct: float = .0, prepayment_pct: float = .0, default_penalty_pct: float = .0, default_penalty_amt: float = .0, **kwargs):
         self.effective_interest_rate = effective_interest_rate
         self.fixed_fees = fixed_fees
@@ -128,7 +129,7 @@ class AmortisingExposureAtDefault:
 
 
 class CCFExposureAtDefault:
-    '''
+    """
     Credit Conversion Factor (CCF) EAD
 
     Calculate EAD using one of the CCF methods:
@@ -137,7 +138,7 @@ class CCFExposureAtDefault:
     * ``METHOD-2``: EAD(t) = AccountLimit * CCF
     * ``METHOD-3``: EAD(t) = OutstandingBalance + (AccountLimit - OutstandingBalance) * CCF
 
-    '''
+    """
     def __init__(self, ccf_method: str, ccf: float, **kwargs):
         self.ccf_method = ccf_method.upper()
         self.ccf = ccf
@@ -165,18 +166,18 @@ class CCFExposureAtDefault:
 class ExposureAtDefault:
     @classmethod
     def from_assumptions(cls, assumptions: EADAssumptions, scenario: Scenario, eir: EffectiveInterestRate):
-        if assumptions.type.upper() =='CONSTANT':
+        if assumptions.type.upper() == 'CONSTANT':
             return ConstantExposureAtDefault(
                 exposure_at_default=assumptions.exposure_at_default
             )
-        elif assumptions.type.upper() =='AMORTISING':
+        elif assumptions.type.upper() == 'AMORTISING':
             return AmortisingExposureAtDefault(
                 effective_interest_rate=eir,
                 fixed_fees=assumptions.fees_fixed,
                 fees_pct=assumptions.fees_pct,
                 prepayment_pct=assumptions.prepayment_pct
             )
-        elif assumptions.type.upper() =='CCF':
+        elif assumptions.type.upper() == 'CCF':
             return CCFExposureAtDefault(
                 ccf_method=assumptions.ccf_method,
                 ccf=assumptions.ccf
