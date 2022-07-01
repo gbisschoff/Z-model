@@ -1,4 +1,4 @@
-'''
+"""
 Loss Given Default (LGD)
 
 This module contains the different LGD models available. The following types are available:
@@ -14,7 +14,7 @@ LGD model based on the segment assumptions.
 
 Each LGD model exposes a common API to calculate the account specific LGD vector.
 
-'''
+"""
 from numpy import repeat, array, maximum, zeros, arange
 from pandas import Series
 from dateutil.relativedelta import relativedelta
@@ -24,8 +24,9 @@ from .effective_interest_rate import EffectiveInterestRate
 from .exposure_at_default import ExposureAtDefault
 from .assumptions import LGDAssumptions
 
+
 class SecuredLossGivenDefault:
-    '''
+    """
     Secured LGD
 
     The secured LGD is calculated as follows:
@@ -36,7 +37,7 @@ class SecuredLossGivenDefault:
         CI(t) = Index(t + TTS) / Index(t=0)
 
 
-    '''
+    """
     def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int, forced_sale_discount: float, sales_cost: float, floor: float, exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate, index: array, **kwargs):
         self.probability_of_cure = probability_of_cure
         self.loss_given_cure = loss_given_cure
@@ -45,12 +46,12 @@ class SecuredLossGivenDefault:
         self.sales_cost = sales_cost
         self.floor = floor
         self.exposure_at_default = exposure_at_default
-        self.effecive_interest_rate = effective_interest_rate
+        self.effective_interest_rate = effective_interest_rate
         self.index = index
 
     def __getitem__(self, account: Account):
         ead = self.exposure_at_default[account]
-        eir = self.effecive_interest_rate[account]
+        eir = self.effective_interest_rate[account]
         ci = self.index.shift(-self.time_to_sale)[account.remaining_life_index] / self.index[account.reporting_date]
         df = (1 + eir) ** -self.time_to_sale
 
@@ -73,7 +74,7 @@ class SecuredLossGivenDefault:
 
 
 class UnsecuredLossGivenDefault:
-    '''
+    """
     Unsecured LGD
 
     The unsecured LGD is calculated as follows:
@@ -81,22 +82,22 @@ class UnsecuredLossGivenDefault:
     .. math::
         LGD(t) = P[Cure] * LGC + (1 - P[Cure]) * LGWO
 
-    '''
+    """
     def __init__(self, probability_of_cure: float, loss_given_cure: float, loss_given_write_off: float, **kwargs):
         self.probability_of_cure = probability_of_cure
-        self.loss_given_cuve = loss_given_cure
+        self.loss_given_cure = loss_given_cure
         self.loss_given_write_off = loss_given_write_off
 
     def __getitem__(self, account: Account):
         return Series(
-             self.probability_of_cure * self.loss_given_cuve +
-             (1 - self.probability_of_cure) * self.loss_given_write_off,
+            self.probability_of_cure * self.loss_given_cure +
+            (1 - self.probability_of_cure) * self.loss_given_write_off,
             index=account.remaining_life_index
         )
 
 
 class ConstantLossGivenDefault:
-    '''
+    """
     Constant LGD
 
     The constant LGD is calculated as follows:
@@ -104,7 +105,7 @@ class ConstantLossGivenDefault:
     .. math::
         LGD(t) = LGD
 
-    '''
+    """
     def __init__(self, loss_given_default: float, **kwargs):
         self.loss_given_default = loss_given_default
 
@@ -114,8 +115,9 @@ class ConstantLossGivenDefault:
             index=account.remaining_life_index
         )
 
+
 class ConstantGrowthLossGivenDefault:
-    '''
+    """
     Secured LGD
 
     The secured LGD is calculated as follows:
@@ -125,7 +127,7 @@ class ConstantGrowthLossGivenDefault:
         LGP(t) = max( (EAD(t) - CollateralValue * CI(t) * (1-FSD) * (1-SC) * df(TTS)) / EAD(t), Floor )
         CI(t) = (1 + GrowthRate)^((t + TTS)/12)
 
-    '''
+    """
     def __init__(self, probability_of_cure: float, loss_given_cure: float, time_to_sale: int,
                  forced_sale_discount: float, sales_cost: float, floor: float,
                  exposure_at_default: ExposureAtDefault, effective_interest_rate: EffectiveInterestRate,
@@ -137,12 +139,12 @@ class ConstantGrowthLossGivenDefault:
         self.sales_cost = sales_cost
         self.floor = floor
         self.exposure_at_default = exposure_at_default
-        self.effecive_interest_rate = effective_interest_rate
+        self.effective_interest_rate = effective_interest_rate
         self.growth_rate = growth_rate
 
     def __getitem__(self, account: Account):
         ead = self.exposure_at_default[account]
-        eir = self.effecive_interest_rate[account]
+        eir = self.effective_interest_rate[account]
         ci = (1 + self.growth_rate) ** ((self.time_to_sale + arange(account.remaining_life)) / 12)
         df = (1 + eir) ** -self.time_to_sale
 
@@ -165,7 +167,7 @@ class ConstantGrowthLossGivenDefault:
 
 
 class IndexedLossGivenDefault:
-    '''
+    """
     Indexed LGD
 
     The indexed LGD is calculated as follows:
@@ -173,7 +175,7 @@ class IndexedLossGivenDefault:
     .. math::
         LGD(t) = LGD * Index(t) / Index(t=0)
 
-    '''
+    """
     def __init__(self, loss_given_default: float, index:array, **kwargs):
         self.loss_given_default = loss_given_default
         self.index = index
@@ -183,6 +185,7 @@ class IndexedLossGivenDefault:
             self.loss_given_default * self.index[account.remaining_life_index] / self.index[account.reporting_date],
             index=account.remaining_life_index
         )
+
 
 class LossGivenDefault:
     @classmethod
