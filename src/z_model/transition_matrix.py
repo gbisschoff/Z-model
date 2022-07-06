@@ -9,26 +9,26 @@ from scipy.stats import norm as normal
 
 
 def logM(x):
-    '''Calculate the `log` of a matrix `X` by first performing eigen value decomposition'''
+    """Calculate the `log` of a matrix `X` by first performing eigen value decomposition"""
     e_value, e_vector = eig(x)
     Q = e_vector @ diag(log(e_value)) @ inv(e_vector)
     return Q
 
 def expM(Q):
-    '''Calculate the `exp` of a matrix `X` by first performing eigen value decomposition'''
+    """Calculate the `exp` of a matrix `X` by first performing eigen value decomposition"""
     e_value, e_vector = eig(Q)
     P = e_vector @ diag(exp(e_value)) @ inv(e_vector)
     return P
 
 def powerM(x, t):
-    '''Calculate the power of a matrix `X` by multiplying the `X` matrix with it self `t` times'''
+    """Calculate the power of a matrix `X` by multiplying the `X` matrix with it self `t` times"""
     return reduce(__matmul__, [x]*t)
 
 def gmDA(x, t):
-    '''
+    """
     Perform the Diagonal Adjustment (DA) regularisation method on the Generator Matrix
     https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.164.305&rep=rep1&type=pdf
-    '''
+    """
     Q = logM(x)/t
     Q[Q<0] = 0
     fill_diagonal(Q, -sum(Q, axis=1))
@@ -36,10 +36,10 @@ def gmDA(x, t):
     return Q
 
 def gmWA(x, t):
-    '''
+    """
     Perform the Weighted Adjustment (WA) regularisation method on the Generator Matrix
     https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.164.305&rep=rep1&type=pdf
-    '''
+    """
     n = x.shape[0]
     Q = logM(x)/t
     for i in range(n):
@@ -51,10 +51,10 @@ def gmWA(x, t):
     return diag(diag(Q)) + Q*(Q>0)
 
 def gmQO(x,t):
-    '''
+    """
     Perform the Quasi-optimisation (QO) regularisation method on the Generator Matrix
     https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.164.305&rep=rep1&type=pdf
-    '''
+    """
     n = x.shape[0]
     Q = logM(x)/t
     for i in range(n):
@@ -78,7 +78,7 @@ def gmQO(x,t):
 
 
 def add_write_off(x: array, pcure: float, cure_state: int, time_to_sale: int):
-    '''Add the  one month probability of cure and probability of write-off to the transition matrix'''
+    """Add the  one month probability of cure and probability of write-off to the transition matrix"""
     mu_w = 1 / time_to_sale # Calculate the force of transition to write-off
     mu_c = (mu_w - (1 - pcure) * mu_w) / (1 - pcure) # calculate the force of transition to cure
     s = exp(-(mu_c + mu_w)) # calculate the survival probability (i.e. remain in default)
@@ -96,17 +96,17 @@ def add_write_off(x: array, pcure: float, cure_state: int, time_to_sale: int):
 
 
 def make_monthly_matrix(x: array, frequency: int, pcure: float, cure_state: int, time_to_sale:int):
-    '''Transform the transition matrix into a 1m transition matrix using the WA regularisation method, and include the write-off and cure'''
+    """Transform the transition matrix into a 1m transition matrix using the WA regularisation method, and include the write-off and cure"""
     p = expM(gmWA(x, frequency))
     return add_write_off(p, pcure, cure_state, time_to_sale)
 
 
 class TransitionMatrix:
-    '''Transition Matrix
+    """Transition Matrix
 
     :param x: a Series of marginal transition matrixes
     :param default_state: the column in the transition matrix associated with Default
-    '''
+    """
     def __init__(self, x: Series, default_state: int):
         self.x = x
         self.shape = (len(x), x[0].shape)
@@ -127,12 +127,12 @@ class TransitionMatrix:
         return self.x.index
 
     def get_cumulative(self, idx, return_list=False):
-        '''
+        """
         Get the cumulative probability matrix as the product of the marginal matrixes
 
         :param idx: the index of the marginal transition matrixes to use.
         :param return_list: should all cumulative matrixes be returned (True) on only the last cumulative matrix (Default: False).
-        '''
+        """
         i = expand_dims(identity(self.shape[-1][0]), axis=0)
         x = append(i, stack(self[idx].values)[:-1], axis=0)
 
@@ -153,31 +153,31 @@ class TransitionMatrix:
 
     @staticmethod
     def matrix_cumulative_prod(l, return_list=False):
-        '''
+        """
         Calculate the cumulative product of a list of matrixes
 
         :param l: the list of matrixes to multiply
         :param return_list: should intermediate products be returned (True) or only the last matrix (Default: False)
-        '''
+        """
         if return_list:
             return reduce(lambda a, x: a + [a[-1] @ x] if a else [x], l, [])
         else:
             return reduce(lambda a, x: a @ x if len(a) > 0 else x, l)
 
     def get_m_step_probabilities(self, to_state: int, m: int = 12):
-        '''
+        """
         Get the probability of transitioning from the stating states to the `to_state` in `m` steps.
 
         :param to_state: the end state in the matrix
         :param m: the number of steps (Default: 12)
-        '''
+        """
         tmv = stack(self)
         stmv = array([reduce(dot, tmv[i:i + m]) for i in range(len(tmv) - m)])
         return DataFrame(stmv[:, :, to_state], index=self.index[:-m])
 
     @classmethod
     def from_assumption(cls, ttc_transition_matrix: array, rho: float, z: Series, calibrated:bool=False, default_state:int=-1, method:str = 'METHOD-1', **kwargs):
-        '''
+        """
         Calculate the TransitionMatrix from the model assumptions.
 
         :param ttc_transition_matrix: the Through-the-Cycle (TTC) probability matrix
@@ -191,7 +191,7 @@ class TransitionMatrix:
             * `METHOD-2` : Use the Default Barrier method
 
         Note that the TTC transition matrix is standardised to ensure there are no negative probabilites.
-        '''
+        """
         def standardise(x):
             x[x < 0] = 0
             x = abs(x) / sum(abs(x), axis=1, keepdims=True)
