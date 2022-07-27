@@ -2,8 +2,9 @@ from pathlib import Path
 import PySimpleGUI as sg
 from time import sleep
 from rsa.pkcs1 import VerificationError
+from z_model.forecast import forecast
 from z_model.logging import logging, setup_logging
-from z_model.__main__ import run, __copyright__, __version__, license
+from z_model.__main__ import run, __copyright__, __version__, license, ForecastType
 from z_model.exeutor import Methods
 
 setup_logging()
@@ -29,6 +30,11 @@ sg.DEFAULT_FONT = 'Calibri'
 sg.theme_add_new('Dashboard', theme_dict)
 sg.theme('Dashboard')
 
+forecast_type = {
+    'Static Balance sheet': ForecastType.StaticBalanceSheetForecast,
+    'Dynamic Balance sheet': ForecastType.DynamicBalanceSheetForecast,
+    'Business Plan': ForecastType.BusinessPlanForecast
+}
 
 top_banner = [
     [sg.Image(source=str(logo)), sg.Text(' |  Z-Model', font=('Calibri', 28))],
@@ -36,11 +42,13 @@ top_banner = [
 
 inputs = [
     [sg.Text('Model Inputs', font=('Calibri', 20))],
+    [sg.Text('Forecast Type:\t\t'), sg.Combo(list(forecast_type.keys()), default_value=list(forecast_type.keys())[0], key='-FORECAST-TYPE-', readonly=True, expand_x=True)],
     [sg.Text('Account data:\t\t'), sg.Input(size=(20,0)), sg.FileBrowse(key='-ACCOUNT_DATA-')],
     [sg.Text('Assumptions:\t\t'), sg.Input(size=(20,0)), sg.FileBrowse(key='-ASSUMPTIONS-')],
     [sg.Text('Macroeconomic Scenarios:\t'), sg.Input(size=(20,0)), sg.FileBrowse(key='-SCENARIOS-')],
     [sg.Text('Results:\t\t\t'), sg.Input(size=(20,0)), sg.FileSaveAs('Browse', key='-RESULTS-', default_extension='.zip', file_types=(('application/zip', '*.zip'),))],
     [sg.Text('Portfolio Assumptions:\t'), sg.Input(size=(20,0),default_text='Optional'), sg.FileBrowse(key='-PORTFOLIO-ASSUMPTIONS-')],
+    [sg.Text('Climate Risk Adjustments:\t'), sg.Input(size=(20,0),default_text='Optional'), sg.FileBrowse(key='-CRVA-')],
 ]
 
 actions = [
@@ -56,7 +64,7 @@ notes = [
 layout = [
     [sg.Column(top_banner, size=(400, 60))],
     [sg.HorizontalSeparator(pad=(0,5))],
-    [sg.Column(inputs, size=(400, 200))],
+    [sg.Column(inputs, size=(400, 280))],
     [sg.HorizontalSeparator(pad=(0,10))],
     [sg.Column(actions, size=(400, 80))],
     [sg.Column(notes, size=(400, 40))],
@@ -87,12 +95,15 @@ def main():
                     else:
                         sg.popup_quick('The model is running and might take some time to compete and appear to be frozen. Please be patient.', title='Z-Model', icon=icon)
                         window['progressbar'].update_bar(20)
+
                         run(
+                            forecast_type=forecast_type.get(values['-FORECAST-TYPE-']),
                             account_data=Path(values['-ACCOUNT_DATA-']),
                             assumptions=Path(values['-ASSUMPTIONS-']),
                             scenarios=Path(values['-SCENARIOS-']),
                             outfile=Path(values['-RESULTS-']),
-                            portfolio_assumptions=Path(values['-PORTFOLIO-ASSUMPTIONS-']) if values['-PORTFOLIO-ASSUMPTIONS-'] != '' else None,
+                            portfolio_assumptions=Path(values['-PORTFOLIO-ASSUMPTIONS-']) if values['-PORTFOLIO-ASSUMPTIONS-'] else None,
+                            climate_risk_scenarios=Path(values['-CRVA-']) if values['-CRVA-'] else None,
                             method=Methods.ProgressMap
                         )
                         window['progressbar'].update_bar(100)
@@ -117,8 +128,7 @@ def main():
         sg.popup_ok(
             f"ERROR 500\n\n"
             f"{str(e)}\n\n"
-            f"Please check logs for more information:\n"
-            f"{logfile}",
+            f"Please check log for more information:\n",
             title='Z-Model',
             icon=sg.SYSTEM_TRAY_MESSAGE_ICON_WARNING,
         )
