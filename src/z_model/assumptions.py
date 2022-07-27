@@ -25,7 +25,7 @@ class PDAssumptions:
 
     The PD model has the following configurable assumptions:
 
-    :param type: The type of PD model to use. At the moment only ``TRANSITION_MATRIX`` is supported. The transition matrix
+    :param forecast_type: The forecast_type of PD model to use. At the moment only ``TRANSITION_MATRIX`` is supported. The transition matrix
         supports both single and multiple default definitions depending on if default is an absorbing state or not.
     :param z_index: The Z-index (Credit Cycle Index) to look up from the :class:`Scenarios` object.
     :param rho: The asset correlation assumption. See the methodology section on how this should be calibrated.
@@ -73,7 +73,7 @@ class LGDAssumptions:
 
     The LGD model has the following configurable assumptions:
 
-    :param type: the type of LGD model to use. The following LGD models exist, each with its own set of parameters:
+    :param forecast_type: the forecast_type of LGD model to use. The following LGD models exist, each with its own set of parameters:
 
         * ``CONSTANT``: Applies a constant LGD value to all accounts.
         * ``CONSTANT-GROWTH``: Applies a constant growth rate to the collateral value before calculating the LGD.
@@ -123,7 +123,7 @@ class EADAssumptions:
 
     The EAD model has the following configurable assumptions:
 
-    :param type: the type of EAD model to use. The following models are available:
+    :param forecast_type: the forecast_type of EAD model to use. The following models are available:
 
         * ``CONSTANT``: A constant value is applied to all accounts.
         * ``AMORTISING``: The EAD is calculated using an amortising method. See :class:`ExposureAtDefaul` for more
@@ -131,7 +131,7 @@ class EADAssumptions:
         * ``CCF``: The EAD is calculated using a CCF factor. Three different methods are available, see ``ccf_method``
             for more information.
 
-    :param exposure_at_default: the constant EAD to use when the type is ``CONSTANT``.
+    :param exposure_at_default: the constant EAD to use when the forecast_type is ``CONSTANT``.
     :param ccf_method: the CCF method to use. The following method are available:
 
         * ``METHOD-1``: the ``ccf``  is applied to the outstanding balance
@@ -150,10 +150,10 @@ class EADAssumptions:
             EAD = outstanding_balance + (limit - outstanding_balance) \times ccf
 
     :param ccf: the ccf value used in the above formulas.
-    :param fees_fixed: Only used when the ``type`` is ``AMORTISING``. The fixed fees charged each month.
-    :param fees_pct: Only used when the ``type`` is ``AMORTISING``. The percentage of the oustanding balance charged
+    :param fees_fixed: Only used when the ``forecast_type`` is ``AMORTISING``. The fixed fees charged each month.
+    :param fees_pct: Only used when the ``forecast_type`` is ``AMORTISING``. The percentage of the oustanding balance charged
         as fees each month.
-    :param prepayment_pct: Only used when the ``type`` is ``AMORTISING``. The percentage overpayment made expressed as
+    :param prepayment_pct: Only used when the ``forecast_type`` is ``AMORTISING``. The percentage overpayment made expressed as
         a percentage of the contractual payment, i.e. 10% implies on average obligors pay
         ``contractual_pmt * (1 + 10%)``
 

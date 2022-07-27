@@ -1,8 +1,11 @@
 from pathlib import Path
-from zipfile import ZipFile, ZIP_DEFLATED
-from pandas import DataFrame
+from tempfile import TemporaryDirectory
+
 from numpy import sum
-from .file_reader import guess_extension
+from pandas import DataFrame, concat
+
+from z_model.file_reader import guess_extension
+from z_model.io import zip_files
 
 
 class Results:
@@ -18,18 +21,27 @@ class Results:
     def __init__(self, data: DataFrame):
         self.data = data
 
-    def reporting_rate_results(self):
+    def __add__(self, other):
+        """
+        Add two Results objects together.
+        """
+        if not isinstance(other, Results):
+            raise TypeError(f'Object is not of type "Results"')
+
+        return Results(concat([self.data, other.data]))
+
+    def reporting_rate_results(self) -> DataFrame:
         """
         Return only the IFRS9 Reporting date results
         """
         rs = self.data[
-            (self.data['account_type']=='Actual')
-            & (self.data['T']==0)
+            (self.data['account_type'] == 'Actual')
+            & (self.data['T'] == 0)
         ].copy()
         rs.drop(columns=['T', 'forecast_reporting_date', 'PD(t)', 'DF(t)', 'Marginal CR(t)', 'Write-off(t)'], inplace=True)
         return rs
 
-    def summarise(self, by=('account_type', 'segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs):
+    def summarise(self, by=('account_type', 'segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs) -> DataFrame:
         """
         Summarise the ECL results.
 
@@ -83,7 +95,7 @@ class Results:
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'ecl': 'ECL(t)', 'cr': 'CR(t)'}, inplace=True)
         return rs[[*by, 'stage', '#', 'Exposure(t)', 'ECL(t)', 'CR(t)']]
 
-    def parameters(self, by=('segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs):
+    def parameters(self, by=('segment_id', 'forecast_reporting_date', 'scenario'), *args, **kwargs) -> DataFrame:
         """
         Summarise the parameters.
 
@@ -113,7 +125,7 @@ class Results:
         rs.rename(columns={'n': '#', 'exposure': 'Exposure(t)', 'epd': '12mPD(t)', 'elgd': 'LGD(t)'}, inplace=True)
         return rs[[*by, '#', 'Exposure(t)', '12mPD(t)', 'LGD(t)']]
 
-    def save(self, url: Path, *args, **kwargs):
+    def save(self, url: Path, *args, **kwargs) -> Path:
         """
         Save the results and reports to a zip archive.
 
@@ -125,8 +137,18 @@ class Results:
         if guess_extension(url) != '.zip':
             raise ValueError(f'The file path {url} is not a .zip file.')
 
-        with ZipFile(url, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
-            zf.writestr("detailed-results.csv", self.data.to_csv(index=False))
-            zf.writestr("reporting-date-results.csv", self.reporting_rate_results().to_csv(index=False))
-            zf.writestr("summary.csv", self.summarise(*args, **kwargs).to_csv(index=False))
-            zf.writestr("parameters.csv", self.parameters(*args, **kwargs).to_csv(index=False))
+        with TemporaryDirectory() as directory:
+            directory_path = Path(directory)
+            self.data.to_parquet(directory_path / 'detailed-results.parquet', index=False)
+            self.reporting_rate_results().to_csv(directory_path / 'reporting-date-results.csv', index=False)
+            self.summarise(*args, **kwargs).to_csv(directory_path / 'summary.csv', index=False)
+            self.parameters(*args, **kwargs).to_csv(directory_path / 'parameters.csv', index=False)
+
+            files = [
+                (directory_path / 'detailed-results.parquet'),
+                (directory_path / 'reporting-date-results.csv'),
+                (directory_path / 'summary.csv'),
+                (directory_path / 'parameters.csv'),
+            ]
+
+            return zip_files(files, destination=url)

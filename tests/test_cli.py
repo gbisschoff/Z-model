@@ -1,15 +1,19 @@
 import pytest
 from pathlib import Path
-from z_model.__main__ import run, Methods, generate_scenarios, about
+from z_model.__main__ import run, Methods, generate_scenarios, about, ForecastType
 
 
-def test_cli(tmp_path):
+def test_about(tmp_path):
+    """API Tests"""
+
+    about()
+
+
+def test_generate_scenarios(tmp_path):
     """API Tests"""
 
     d = tmp_path / "data"
     d.mkdir()
-
-    about()
 
     generate_scenarios(
         assumptions=Path('./data/MONTE_CARLO_ASSUMPTIONS.xlsx'),
@@ -17,8 +21,33 @@ def test_cli(tmp_path):
     )
     assert Path(d / 'out-scenarios.xlsx').exists()
 
+
+def test_static_balancesheet_forecast(tmp_path):
+    """API Tests"""
+
+    d = tmp_path / "data"
+    d.mkdir()
+
     run(
-        account_data=Path('./data/account_level_data.xlsx'),
+        forecast_type=ForecastType.StaticBalanceSheetForecast,
+        account_data=Path('./data/account-data.xlsx'),
+        assumptions=Path('./data/ASSUMPTIONS.xlsx'),
+        scenarios=Path('./data/SCENARIOS.xlsx'),
+        outfile=Path(d / 'out.zip'),
+        method=Methods.ProgressMap
+    )
+    assert Path(d / 'out.zip').exists()
+
+
+def test_business_plan_forecast(tmp_path):
+    """API Tests"""
+
+    d = tmp_path / "data"
+    d.mkdir()
+
+    run(
+        forecast_type=ForecastType.BusinessPlanForecast,
+        account_data=Path('./data/account-data.xlsx'),
         assumptions=Path('./data/ASSUMPTIONS.xlsx'),
         scenarios=Path('./data/SCENARIOS.xlsx'),
         outfile=Path(d / 'out.zip'),
@@ -26,3 +55,39 @@ def test_cli(tmp_path):
         method=Methods.ProgressMap
     )
     assert Path(d / 'out.zip').exists()
+
+
+def test_dynamic_balancesheet_forecast(tmp_path):
+    """API Tests"""
+
+    d = tmp_path / "data"
+    d.mkdir()
+
+    run(
+        forecast_type=ForecastType.DynamicBalanceSheetForecast,
+        account_data=Path('./data/account-data.xlsx'),
+        assumptions=Path('./data/ASSUMPTIONS.xlsx'),
+        scenarios=Path('./data/SCENARIOS.xlsx'),
+        outfile=Path(d / 'out.zip'),
+        method=Methods.ProgressMap
+    )
+    assert Path(d / 'out.zip').exists()
+
+
+def test_climate_risk_forecast(tmp_path):
+    """API Tests"""
+
+    d = tmp_path / "data"
+    d.mkdir()
+
+    run(
+        forecast_type=ForecastType.DynamicBalanceSheetForecast,
+        account_data=Path('./data/account-data-cr.xlsx'),
+        assumptions=Path('./data/ASSUMPTIONS-cr.xlsx'),
+        scenarios=Path('./data/SCENARIOS.xlsx'),
+        outfile=Path(d / 'out.zip'),
+        climate_risk_scenarios=Path('./data/crva-template.csv'),
+        method=Methods.ProgressMap
+    )
+    assert Path(d / 'out.zip').exists()
+

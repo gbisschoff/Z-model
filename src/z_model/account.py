@@ -1,5 +1,5 @@
 from numpy import array, zeros, isnat
-from pandas import date_range, period_range, Int64Dtype, DataFrame, isnull, NA, concat
+from pandas import date_range, period_range, Int64Dtype, DataFrame, isnull, NA, concat, DateOffset, NaT
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +8,7 @@ from pandas.tseries.offsets import MonthEnd
 
 
 class Account:
-    '''
+    """
     Account
 
     Each row in the :class:`AccountData` gets converted into an :class:`Account` object with the same properties.
@@ -18,7 +18,7 @@ class Account:
     * remaining_life_index: a :class:`date_range` object specifying the date index between the reporting date and the
       end of the accounts remaining life.
 
-    '''
+    """
     def __init__(self, contract_id: str, outstanding_balance:float, limit:float, current_arrears:float, contractual_payment:float, contractual_freq:int, interest_rate_type:str, interest_rate_freq:int, fixed_rate:float, spread:float, origination_date:datetime, payment_holiday_end_date:datetime, maturity_date:datetime, reporting_date:datetime, remaining_life:int, collateral_value:float, origination_rating:int, current_rating:int, watchlist:int, *args, **kwargs):
         self.contract_id = contract_id
         self.outstanding_balance = outstanding_balance
@@ -67,8 +67,8 @@ class AccountData:
       For monthly repayments use the value 12. For Bullet loans that has only one payment it should be
       12 / Remaining Life
 
-    * interest_rate_type (String): The interest rate type, either `FIXED` or `FLOATING`. If the interest rate type
-      is set to `FIXED` the `fixed_rate` column should be populated. If the interest rate type is set to
+    * interest_rate_type (String): The interest rate forecast_type, either `FIXED` or `FLOATING`. If the interest rate forecast_type
+      is set to `FIXED` the `fixed_rate` column should be populated. If the interest rate forecast_type is set to
       `FLOATING` the `spread` column should be populated.
 
     * interest_rate_freq (Integer): The interest rate compounding frequency. In most cases this would be annually,
@@ -125,22 +125,36 @@ class AccountData:
     }
 
     def __init__(self, data: DataFrame):
-        '''
+        """
         Create an `AccountData` object from a Pandas DataFrame.
-        '''
+        """
         self.data = data
 
     def __len__(self):
-        '''
+        """
         Return the number of accounts in the data.
-        '''
+        """
         return len(self.data.index)
 
     def __add__(self, other):
         if not isinstance(other, AccountData):
-            raise TypeError('Object is not of type AccountData')
+            raise TypeError('Object is not of forecast_type AccountData')
 
         return AccountData(concat([self.data, other.data]))
+
+    def offset(self, months: int):
+        """
+        Offset the data by a number of months. This is done by adjusting the reporting date in the data
+
+        new reporting date = current reporting date + months
+
+        :param months: the number of months to offset the data
+
+        """
+        delta = DateOffset(months=months)
+        df = self.data.copy()
+        df['reporting_date'] = df['reporting_date'] + delta
+        return AccountData(df)
 
     @classmethod
     def from_file(cls, url: Path):
@@ -156,13 +170,12 @@ class AccountData:
         return cls(data=data)
 
 
-
 class SimulatedAccountData(AccountData):
-    '''
+    """
     Generate a dummy loan book based on portfolio assumptions
 
     The PORTFOLIO_ASSUMPTIONS data template should be used.
-    '''
+    """
     DICTIONARY = {
         'segment_id': int,
         'type': str,
@@ -208,7 +221,7 @@ class SimulatedAccountData(AccountData):
                 'fixed_rate': interest_rate,
                 'spread': spread,
                 'origination_date': origination_date,
-                'payment_holiday_end_date': NA,
+                'payment_holiday_end_date': NaT,
                 'reporting_date': origination_date + MonthEnd(0),
                 'remaining_life': term,
                 'collateral_value': collateral_value,

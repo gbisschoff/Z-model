@@ -9,9 +9,11 @@ from .exposure_at_default import ExposureAtDefault
 from .account import Account, AccountData
 from .assumptions import SegmentAssumptions
 from .scenarios import Scenario
+from .climate_risk_scenarios import ClimateRiskScenario
+
 
 class ECLModel:
-    r'''
+    r"""
     ECL Model
 
     This class contains the logic to configure the ECL model as well as calculate the ECL for a given :class:`Account`.
@@ -33,13 +35,13 @@ class ECLModel:
 
         ECL(T | S=3) = LGD(t)
 
-    Afterwhich, the expected ECL at time T is calculated as the probability weighted average of the stage
+    After which, the expected ECL at time T is calculated as the probability weighted average of the stage
     conditional ECLs:
 
     .. math::
         ECL(T) = \sum_{s \in S} ECL(T | S=s) \times P[S_T = s]
 
-    '''
+    """
     def __init__(self, stage_probability: StageProbability, exposure_at_default: ExposureAtDefault, probability_of_default: ProbabilityOfDefault, loss_given_default: LossGivenDefault, effective_interest_rate: EffectiveInterestRate, *args, **kwargs):
         self.stage_probability = stage_probability
         self.exposure_at_default = exposure_at_default
@@ -48,14 +50,14 @@ class ECLModel:
         self.effective_interest_rate = effective_interest_rate
 
     def __getitem__(self, account: Account):
-        '''
+        """
         Calculate the account level ECL forecast.
 
         :param account: an :class:`Account` object.
 
         :returns: :class:`DataFrame` with the account level ECL forecast.
 
-        '''
+        """
         eir = self.effective_interest_rate[account]
         df_t = cumprod(1 + eir) / (1 + eir[0])
         df_t0 = 1 / cumprod(1 + eir)
@@ -110,14 +112,15 @@ class ECLModel:
         return result
 
     @classmethod
-    def from_assumptions(cls, segment_assumptions: SegmentAssumptions, scenario: Scenario):
-        '''
+    def from_assumptions(cls, segment_assumptions: SegmentAssumptions, scenario: Scenario, climate_risk_scenario: ClimateRiskScenario = None):
+        """
         Configure the ECL model .
 
-        :param segment_assumptions: object of type :class:`SegmentAssumptions`
-        :param scenario: object of type :class:`Scenario`
+        :param segment_assumptions: object of forecast_type :class:`SegmentAssumptions`
+        :param scenario: object of forecast_type :class:`Scenario`
+        :param climate_risk_scenario: object of forecast_type :class:`ClimateRiskScenario`
 
-        '''
+        """
 
         p = make_monthly_matrix(
             x=segment_assumptions.pd.transition_matrix,
@@ -143,6 +146,6 @@ class ECLModel:
         )
         ead = ExposureAtDefault.from_assumptions(segment_assumptions.ead, scenario, eir)
         pd = ProbabilityOfDefault.from_assumptions(segment_assumptions.pd, transition_matrix=tm)
-        lgd = LossGivenDefault.from_assumptions(segment_assumptions.lgd, ead, eir, scenario)
+        lgd = LossGivenDefault.from_assumptions(segment_assumptions.lgd, ead, eir, scenario, climate_risk_scenario)
 
         return cls(sp, ead, pd, lgd, eir)

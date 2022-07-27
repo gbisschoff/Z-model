@@ -15,14 +15,38 @@ LGD model based on the segment assumptions.
 Each LGD model exposes a common API to calculate the account specific LGD vector.
 
 """
-from numpy import repeat, array, maximum, zeros, arange
+from numpy import array, maximum, arange
 from pandas import Series
-from dateutil.relativedelta import relativedelta
+
 from .account import Account
-from .scenarios import Scenario
+from .assumptions import LGDAssumptions
 from .effective_interest_rate import EffectiveInterestRate
 from .exposure_at_default import ExposureAtDefault
-from .assumptions import LGDAssumptions
+from .scenarios import Scenario
+from .climate_risk_scenarios import ClimateRiskScenario
+
+
+def secured_lgd(ead: array, probability_of_cure: float, loss_given_cure: float, collateral_value: float, collateral_index: array, forced_sale_discount: (array, array), sales_cost: float, discount_factor: array, floor: float, climate_risk_value_adjustment: (array, array) = (array([[0]]), array([[1]]))):
+    """
+    Calculate the LGD using the secured methodology.
+
+    Dimensions: (Time, CRVA, FSD)
+    """
+    _ead = ead.reshape((-1, 1, 1))
+    _ci = collateral_index.reshape((-1, 1, 1))
+    _crva = climate_risk_value_adjustment[0].reshape((*climate_risk_value_adjustment[0].shape, 1))
+    _crva_p = climate_risk_value_adjustment[1].reshape((*climate_risk_value_adjustment[1].shape, 1))
+    _fsd = forced_sale_discount[0].reshape((1, 1, -1))
+    _fsd_p = forced_sale_discount[1].reshape((1, 1, -1))
+    _df = discount_factor.reshape((-1, 1, 1))
+
+    return (
+        (
+                probability_of_cure * loss_given_cure + (1 - probability_of_cure) *
+                maximum((_ead - (collateral_value * _ci - _crva) * (1 - _fsd) * (1 - sales_cost) * _df) / _ead, floor)
+        ) * _crva_p * _fsd_p
+
+    ).sum(axis=1).sum(axis=1)
 
 
 class SecuredLossGivenDefault:
@@ -55,18 +79,18 @@ class SecuredLossGivenDefault:
         ci = self.index.shift(-self.time_to_sale)[account.remaining_life_index] / self.index[account.reporting_date]
         df = (1 + eir) ** -self.time_to_sale
 
-        lgd = (
-            self.probability_of_cure *
-            self.loss_given_cure +
-            (1 - self.probability_of_cure) *
-            maximum(
-                (
-                    ead
-                    - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
-                ) / ead
-                ,self.floor
-            )
+        lgd = secured_lgd(
+            ead=array(ead),
+            probability_of_cure=self.probability_of_cure,
+            loss_given_cure=self.loss_given_cure,
+            collateral_value=account.collateral_value,
+            collateral_index=array(ci),
+            forced_sale_discount=(array([self.forced_sale_discount]), array([1])),
+            sales_cost=self.sales_cost,
+            discount_factor=array(df),
+            floor=self.floor
         )
+
         return Series(
             lgd,
             index=account.remaining_life_index
@@ -148,18 +172,18 @@ class ConstantGrowthLossGivenDefault:
         ci = (1 + self.growth_rate) ** ((self.time_to_sale + arange(account.remaining_life)) / 12)
         df = (1 + eir) ** -self.time_to_sale
 
-        lgd = (
-            self.probability_of_cure *
-            self.loss_given_cure +
-            (1 - self.probability_of_cure) *
-            maximum(
-                (
-                    ead
-                    - account.collateral_value * ci * (1 - self.forced_sale_discount) * (1 - self.sales_cost) * df
-                ) / ead
-                ,self.floor
-            )
+        lgd = secured_lgd(
+            ead=array(ead),
+            probability_of_cure=self.probability_of_cure,
+            loss_given_cure=self.loss_given_cure,
+            collateral_value=account.collateral_value,
+            collateral_index=array(ci),
+            forced_sale_discount=(array([self.forced_sale_discount]), array([1])),
+            sales_cost=self.sales_cost,
+            discount_factor=array(df),
+            floor=self.floor
         )
+
         return Series(
             lgd,
             index=account.remaining_life_index
@@ -176,7 +200,7 @@ class IndexedLossGivenDefault:
         LGD(t) = LGD * Index(t) / Index(t=0)
 
     """
-    def __init__(self, loss_given_default: float, index:array, **kwargs):
+    def __init__(self, loss_given_default: float, index: array, **kwargs):
         self.loss_given_default = loss_given_default
         self.index = index
 
@@ -187,9 +211,40 @@ class IndexedLossGivenDefault:
         )
 
 
+class SecuredClimateRiskLossGivenDefault(SecuredLossGivenDefault):
+    def __init__(self, climate_risk_scenario: ClimateRiskScenario, *args, **kwargs):
+        super(SecuredClimateRiskLossGivenDefault, self).__init__(*args, **kwargs)
+        self.climate_risk_scenario = climate_risk_scenario
+
+    def __getitem__(self, account: Account):
+        ead = self.exposure_at_default[account]
+        eir = self.effective_interest_rate[account]
+        ci = self.index.shift(-self.time_to_sale)[account.remaining_life_index] / self.index[account.reporting_date]
+        df = (1 + eir) ** -self.time_to_sale
+        crva = self.climate_risk_scenario[(account.contract_id, account.remaining_life_index)]
+
+        lgd = secured_lgd(
+            ead=array(ead),
+            probability_of_cure=self.probability_of_cure,
+            loss_given_cure=self.loss_given_cure,
+            collateral_value=account.collateral_value,
+            collateral_index=array(ci),
+            forced_sale_discount=(array([self.forced_sale_discount]), array([1])),
+            sales_cost=self.sales_cost,
+            discount_factor=array(df),
+            floor=self.floor,
+            climate_risk_value_adjustment=(crva.value, crva.probability)
+        )
+
+        return Series(
+            lgd,
+            index=account.remaining_life_index
+        )
+
+
 class LossGivenDefault:
     @classmethod
-    def from_assumptions(cls, assumptions: LGDAssumptions, ead: ExposureAtDefault, eir: EffectiveInterestRate, scenario: Scenario):
+    def from_assumptions(cls, assumptions: LGDAssumptions, ead: ExposureAtDefault, eir: EffectiveInterestRate, scenario: Scenario, climate_risk_scenario: ClimateRiskScenario = None):
         if assumptions.type.upper() == 'SECURED':
             return SecuredLossGivenDefault(
                 probability_of_cure=assumptions.probability_of_cure,
@@ -228,6 +283,22 @@ class LossGivenDefault:
             return IndexedLossGivenDefault(
                 loss_given_default=assumptions.loss_given_default,
                 index=scenario[assumptions.index]
+            )
+        elif assumptions.type.upper() == 'CR-SECURED':
+            if not climate_risk_scenario:
+                raise ValueError(f'The climate risk LGD is being used, but no climate scenarios are available.')
+
+            return SecuredClimateRiskLossGivenDefault(
+                probability_of_cure=assumptions.probability_of_cure,
+                loss_given_cure=assumptions.loss_given_cure,
+                time_to_sale=assumptions.time_to_sale,
+                forced_sale_discount=assumptions.forced_sale_discount,
+                sales_cost=assumptions.sale_cost,
+                floor=assumptions.floor,
+                exposure_at_default=ead,
+                effective_interest_rate=eir,
+                index=scenario[assumptions.index],
+                climate_risk_scenario=climate_risk_scenario
             )
         else:
             raise ValueError(f'Invalid LGD type: {assumptions.type}')

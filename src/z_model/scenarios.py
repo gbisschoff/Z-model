@@ -6,6 +6,7 @@ from pathlib import Path
 from .series import Series
 from .file_reader import read_file
 
+
 class Scenario:
     """
     Container to store a single scenario's data

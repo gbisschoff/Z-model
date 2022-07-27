@@ -7,6 +7,60 @@ from .assumptions import Assumptions
 from .scenarios import Scenarios
 from .results import Results
 from .ecl_model import ECLModel
+from .climate_risk_scenarios import ClimateRiskScenarios
+
+
+def run_scenario(args):
+    """
+    Execute a single macroeconomic scenario
+
+    :param args: Tuple(scenario_name, scenario, climate_risk_scenario, assumptions, account_data)
+    """
+    scenario_name, scenario, climate_risk_scenario, assumptions, account_data = args
+    ecl_models = {
+        segment_id: ECLModel.from_assumptions(
+            segment_assumptions=assumptions,
+            scenario=scenario,
+            climate_risk_scenario=climate_risk_scenario
+        )
+        for segment_id, assumptions in assumptions.items()
+    }
+
+    data = account_data.data.reset_index()
+    data['Account()'] = data.apply(lambda x: Account(**x), axis=1)
+    data['ECLModel()'] = data['segment_id'].map(ecl_models)
+    data['ECL()'] = data.apply(lambda x: x['ECLModel()'][x['Account()']], axis=1)
+    rs = concat(data['ECL()'].values)
+    rs['scenario'] = scenario_name
+    return rs
+
+
+def calculate_weighted_scenario(data, weights):
+    grouped_data = (
+        data
+        .reset_index()
+        .set_index(['scenario', 'contract_id', 'T', 'forecast_reporting_date'])
+        .groupby(['scenario'])
+    )
+
+    weighted_data = [
+        d * weights.get(scenario_name)
+        for scenario_name, d in grouped_data
+    ]
+
+    weighted_scenario = (
+        concat(weighted_data)
+        .groupby(['contract_id', 'T', 'forecast_reporting_date'])
+        .sum()
+    )
+
+    weighted_scenario['scenario'] = 'weighted'
+    weighted_scenario = (
+        weighted_scenario
+        .reset_index()
+        .set_index(['scenario', 'contract_id', 'T', 'forecast_reporting_date'])
+    )
+    return weighted_scenario
 
 
 class Methods(str, Enum):
@@ -47,48 +101,34 @@ class Executor:
     def __init__(self, method: Methods = Methods.Map):
         self.method = method
 
-    @staticmethod
-    def _run_scenario(args):
-        """
-        Execute a single macroeconomic scenario
-
-        :param args: Tuple(name, scenario, assumptions, account_data)
-        """
-        name, scenario, assumptions, account_data = args
-        ecl_models = {
-            segment_id: ECLModel.from_assumptions(
-                segment_assumptions=assumptions,
-                scenario=scenario
-            )
-            for segment_id, assumptions in assumptions.items()
-        }
-
-        data = account_data.data.reset_index()
-        data['Account()'] = data.apply(lambda x: Account(**x), axis=1)
-        data['ECLModel()'] = data['segment_id'].map(ecl_models)
-        data['ECL()'] = data.apply(lambda x: x['ECLModel()'][x['Account()']], axis=1)
-        rs = concat(data['ECL()'].values)
-        rs['scenario'] = name
-        return rs
-
-    def execute(self, account_data: AccountData, assumptions: Assumptions, scenarios: Scenarios):
+    def execute(self, account_data: AccountData, assumptions: Assumptions, scenarios: Scenarios, climate_risk_scenarios: ClimateRiskScenarios = None):
         """
         Execute the Z-model on the account level data.
 
         :param account_data: and :class:`AccountData` object.
         :param assumptions: an :class:`Assumptions` object containing the model assumptions for each segment.
         :param scenarios: an :class:`Scenarios` object containing the economic scenarios to run.
+        :param climate_risk_scenarios: a :class:`ClimateRiskScenarios` object.
 
         :return:  A :class:`Results` with the account level ECL and ST results for each month until maturity.
         """
-        args = [(n, s, assumptions, account_data) for n, s in scenarios.items()]
-        r = self.method.executor(self._run_scenario, args, desc='Scenarios', position=0)
+        if not climate_risk_scenarios:
+            climate_risk_scenarios = ClimateRiskScenarios({})
 
-        #Calculate weighted scenario
-        r = concat(r).reset_index().set_index(['contract_id', 'T', 'forecast_reporting_date'])
-        weights = scenarios.weights
-        rw = sum([d.drop(columns='scenario') * weights.get(n) for n, d in r.groupby('scenario')])
-        rw['scenario'] = 'Weighted'
-        rc = concat([r, rw]).reset_index()
+        args = [
+            (scenario_name, scenario, climate_risk_scenarios[scenario_name], assumptions, account_data)
+            for scenario_name, scenario in scenarios.items()
+        ]
+
+        r = self.method.executor(run_scenario, args, desc='Scenarios')
+
+        rs = (
+            concat(r)
+            .reset_index()
+            .set_index(['scenario', 'contract_id', 'T', 'forecast_reporting_date'])
+        )
+
+        weighted_scenario = calculate_weighted_scenario(rs, scenarios.weights)
+        rc = concat([rs, weighted_scenario]).reset_index()
 
         return Results(merge(account_data.data, rc, how='left', on='contract_id'))
